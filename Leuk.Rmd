@@ -1,0 +1,525 @@
+---
+title: "The Doppelganger Effect in Biomedical Data sets"
+output: html_notebook
+---
+
+# 2. Exploring the Leukemia Datasets
+
+## 0) Import packages
+
+```{r Import & Install Packages, include=FALSE}
+if (!("doppelgangerIdentifier" %in% installed.packages())){
+  install.packages('devtools')
+  library(devtools)
+  install_github('lr98769/doppelgangerIdentifier')
+}
+library("doppelgangerIdentifier")
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+if (!("biomaRt" %in% installed.packages())){
+  BiocManager::install("biomaRt")
+}
+library("biomaRt")
+```
+
+Some functions for pre- processing and loading of data sets:
+```{r}
+# This function converts the probes to ensemble id
+# df = df with the column "Probe"
+ 
+convertProbesToEnsemble <- function(df, affy_attribute){
+  if (!exists("ensembl")){
+  ensembl <<- useEnsembl(biomart = "ensembl", 
+                    dataset = 'hsapiens_gene_ensembl')
+  }
+  if (!"Probe" %in% colnames(df)){
+    print("The column 'Probe' is missing from df")
+    return()
+  }
+  return_list = list()
+  mapping_table =  select(ensembl, 
+                          keys= df$Probe, 
+                          columns= c(affy_attribute,
+                                     "ensembl_gene_id"),
+                          keytype= affy_attribute)
+  return_list[["mapping_table"]] = mapping_table
+  # Ensure the each affy attribute maps to only 1 ensemble id 
+  # (the smallest one) 
+  # (Ensure that affy->ensemble is a one-to-one mapping)
+  mapping_table = mapping_table[
+    order(mapping_table[[affy_attribute]],
+          mapping_table[["ensembl_gene_id"]]),]
+  mapping_table = mapping_table[!duplicated(
+    mapping_table[[affy_attribute]]),]
+  
+  # Remove all probes with no corresponding ensemble id
+  df = df[df$Probe %in% mapping_table[[affy_attribute]],]
+  # Replace rownames with the ensemble gene id
+  rownames(mapping_table) = mapping_table[[affy_attribute]]
+  df$ensembl_ID = mapping_table[df$Probe,"ensembl_gene_id"]
+  return_list[["before_dedup"]] = df
+  df$Probe = NULL
+  # ensure order of variables stay the same for checking purposes
+  current_order = unique(df$ensembl_ID)
+  # Get the median signal of probes with the same ensemble id
+  df = aggregate(df[,-ncol(df)], by = list(df[,"ensembl_ID"]) , median)
+  rownames(df) = df$Group.1
+  df$Group.1 = NULL
+  df = df[current_order, ]
+  return_list[["returned_df"]] = df
+  return(return_list)
+}
+# Integrates file loading, replacing probes with ensemble id and caching of cleaned_data
+getDataFile<- function(filename, affy_attribute, batch_name){
+  cleaned_filename = paste("cleaned_",filename, sep="")
+  if (!file.exists(cleaned_filename)){
+    temp_df = read.csv(filename)
+    temp_df$PROT = NULL # Remove PROT column
+    # Convert probes to ensemble ids
+    conversion_results <<- convertProbesToEnsemble(
+                                df = temp_df,
+                                affy_attribute = affy_attribute)
+    temp_df = conversion_results$returned_df
+    # Add H to the end so that we can differentiate it later
+    colnames(temp_df) = paste(colnames(temp_df), batch_name, sep = "_")
+    write.csv(temp_df, cleaned_filename)
+    return(temp_df)
+  } else {
+    temp_df = read.csv(cleaned_filename, row.names = 1)
+    return(temp_df)
+  }
+}
+# Generates meta data table from an existing dataframe (Assumes each row is a different patient)
+getMetaDataDataframe <-function(df, batch_name){
+  meta = data.frame(row.names = colnames(df))
+  meta$Patient_ID = rownames(meta)
+  meta$Batch = batch_name
+  meta$Class = substr(meta$Patient_ID, 1, 3)
+  return(meta)
+}
+# Difference between PPCC dfs
+dfSetDifference <- function(df1, df2){
+  setdifference = c()
+  for (i in 1:nrow(df1)){
+    if (!any(df2$Sample1 == df1[i, "Sample1"] & 
+             df2$Sample2 == df1[i, "Sample2"])){
+      setdifference = c(setdifference, i)
+    }
+  }
+  return(df1[setdifference,])
+}
+
+getDoppelnNonDoppelSamples <- function(doppel_result, metadata, batchname){
+  samples = unique(doppel_result$PPCC_df[doppel_result$PPCC_df$DoppelgangerLabel=="Doppelganger", "Sample1"])
+  samples = c(samples, unique(doppel_result$PPCC_df[doppel_result$PPCC_df$DoppelgangerLabel=="Doppelganger", "Sample2"]))
+  all_samples_of_batch = rownames(metadata[metadata$Batch==batchname,])
+  doppel_samples = intersect(all_samples_of_batch, samples)
+  non_doppel_samples = setdiff(all_samples_of_batch, doppel_samples)
+  # Output in df form
+  return_list = list(doppel_samples, non_doppel_samples)
+  ## Compute maximum length
+  max_length = max(sapply(return_list, length))
+  ## Add NA values to list elements
+  return_list = lapply(return_list, function(v) { 
+    c(v, rep(NA, max_length-length(v)))
+    })
+  # Column bind them
+  return_df = do.call(cbind, return_list)
+  colnames(return_df) = c("Doppelganger Samples", "Non-Doppelganger Samples")
+  return(return_df)
+}
+
+
+# Oversample the raw and meta data automatically
+oversample_batch <- function(raw_data, meta_data, seed=2021){
+  return_list = list()
+  # get batch sizes
+  batch_sizes = table(meta_data$Batch)
+  # Get number of samples to over sample
+  add_num_samples = max(batch_sizes) - min(batch_sizes)
+  # Get batch to over sample
+  min_batch = names(which.min(batch_sizes))
+  # Get min_batch sample names
+  min_batch_samples = rownames(meta_data[meta_data$Batch==min_batch, ])
+  # Over sample some samples
+  set.seed(seed)
+  if (add_num_samples < length(min_batch_samples)){
+    new_sample_names = sample(min_batch_samples, add_num_samples, 
+                            replace = FALSE) 
+  }
+  else {
+    print("Error: This function does not support oversampling of over twice the smaller batch's size")
+    return()
+  }
+  
+  new_samples_meta = meta_data[new_sample_names, ]
+  rownames(new_samples_meta) = paste(rownames(new_samples_meta), "dup", sep="_")
+  return_list[["meta_data"]] = as.data.frame(rbind(meta_data,new_samples_meta))
+  
+  new_samples_raw = raw_data[, new_sample_names]
+  colnames(new_samples_raw) = paste(colnames(new_samples_raw), "dup", sep="_")
+  return_list[["raw_data"]] = as.data.frame(cbind(raw_data,new_samples_raw))
+  
+  return(return_list)
+}
+
+# Removes added duplicate samples and sample pairs
+remove_all_dup <-function(doppel_result){
+  doppel_return = doppel_result
+  # Get column names with "_dup"
+  duplicates = grep('_dup', colnames(doppel_return$Batch_corrected), value=TRUE)
+  doppel_return$Batch_corrected = doppel_return$Batch_corrected[, !(colnames(doppel_return$Batch_corrected) %in% duplicates)]
+  doppel_return$PPCC_matrix = doppel_return$PPCC_matrix[, !(colnames(doppel_return$PPCC_matrix) %in% duplicates)]
+  doppel_return$PPCC_matrix = doppel_return$PPCC_matrix[!(rownames(doppel_return$PPCC_matrix) %in% duplicates),]
+  doppel_return$PPCC_df = doppel_return$PPCC_df[!(doppel_return$PPCC_df$Sample1 %in% duplicates) & !(doppel_return$PPCC_df$Sample2 %in% duplicates), ]
+  return(doppel_return)
+}
+```
+
+
+## 1) Import the datasets
+ArmstrongData
+- 24 ALL
+- 24 AML
+
+```{r}
+leuk_A = getDataFile(filename = "data/Leuk-ArmstrongData.csv",
+                     affy_attribute = "affy_hg_u95av2",
+                     batch_name = "A")
+leuk_A_meta = getMetaDataDataframe(df = leuk_A, batch_name = "A")
+```
+
+GolubData
+- 47 ALL
+- 25 AML
+```{r}
+if (!file.exists("cleaned_data/Leuk-GolubData.csv")){
+  leuk_G = read.csv("data/Leuk-GolubData.csv")
+  # Different chip from the rest, not found in biomart
+  if (!requireNamespace("BiocManager", quietly = TRUE))
+      install.packages("BiocManager")
+  if (!"hu6800.db" %in% installed.packages()){
+    BiocManager::install("hu6800.db")
+  }
+  library(hu6800.db)
+  mapping_table = select(hu6800.db, leuk_G$Probe, c("ENSEMBL"), keytype="PROBEID")
+  mapping_table = data.frame(mapping_table)
+  # Remove probes with no ensemble id
+  mapping_table = mapping_table[!is.na(mapping_table$ENSEMBL),]
+  # Ensure the each affy attribute maps to only 1 ensemble id 
+  # (the smallest one) 
+  # (Ensure that affy->ensemble is a one-to-one mapping)
+  mapping_table = mapping_table[
+    order(mapping_table[["PROBEID"]],
+          mapping_table[["ENSEMBL"]]),]
+  mapping_table = mapping_table[!duplicated(
+    mapping_table[["PROBEID"]]),]
+  # Remove variables that have no ensemble id
+  leuk_G = leuk_G[leuk_G$Probe %in% mapping_table$PROBEID,]
+  rownames(mapping_table) = mapping_table$PROBEID
+  # Map Probes to ensembl id
+  leuk_G$ensembl_ID = mapping_table[leuk_G$Probe,"ENSEMBL"]
+  leuk_G$Probe = NULL
+  # ensure order of variables stay the same for checking purposes
+  current_order = unique(leuk_G$ensembl_ID)
+  # Get the median signal of probes with the same ensemble id
+  leuk_G = aggregate(leuk_G[,-ncol(leuk_G)], by = list(leuk_G[,"ensembl_ID"]) , median)
+  rownames(leuk_G) = leuk_G$Group.1
+  leuk_G$Group.1 = NULL
+  leuk_G = leuk_G[current_order, ]
+  # Rename cols so that we can differentiate the batches
+  colnames(leuk_G) = paste(colnames(leuk_G), "G", sep="_")
+  write.csv(leuk_G, "cleaned_data/Leuk-GolubData.csv")
+} else {
+  leuk_G = read.csv("cleaned_data/Leuk-GolubData.csv", row.names = 1)
+}
+
+leuk_G_meta = getMetaDataDataframe(df = leuk_G,
+                                   batch_name = "G")
+
+```
+
+## 2) Identifying PPCC Data Doppelgangers
+
+### a) Within the Armstrong Data
+
+```{r}
+doppel_a = getPPCCDoppelgangers(leuk_A, leuk_A_meta)
+```
+
+```{r}
+visualisePPCCDoppelgangers(doppel_a)
+```
+
+```{r}
+doppel_a$cut_off
+```
+
+There are 100 Doppelgangers. 
+
+```{r}
+table(doppel_a$PPCC_df$DoppelgangerLabel) 
+```
+
+### b) Within the Golub Data
+
+```{r}
+doppel_g = getPPCCDoppelgangers(leuk_G, leuk_G_meta)
+```
+
+```{r}
+visualisePPCCDoppelgangers(doppel_g)
+```
+
+```{r}
+doppel_g$cut_off
+```
+
+There are 76 doppelgangers in total. 
+
+```{r}
+table(doppel_g$PPCC_df$DoppelgangerLabel)
+```
+
+### c) Between Armstrong and Golub
+
+```{r}
+shared_variables_leuk = intersect(
+  rownames(leuk_A), rownames(leuk_G)
+)
+leuk = data.frame(cbind(leuk_A[shared_variables_leuk,],
+                        leuk_G[shared_variables_leuk,]))
+leuk_meta = data.frame(rbind(leuk_A_meta, leuk_G_meta))
+doppel_ag = getPPCCDoppelgangers(leuk, leuk_meta)
+```
+There are 28 doppelgangers between ArmstringData and GolubData.
+
+```{r}
+table(doppel_ag$PPCC_df$DoppelgangerLabel)
+```
+
+```{r}
+doppel_ag$PPCC_df[doppel_ag$PPCC_df$DoppelgangerLabel=="Doppelganger",]
+```
+
+```{r}
+visualisePPCCDoppelgangers(doppel_ag)
+```
+## 3) Batch effect on doppelganger identification
+
+### a) If we do not balance the batches prior to doppelganger identification
+
+We get the above result. 28 Doppelgangers will be identified.
+
+```{r}
+table(leuk_meta$Batch)
+```
+
+### b) If we balance the batches before doppelganger identification.
+
+To balance the two batches, we oversample ArmstrongData
+
+```{r}
+oversample = oversample_batch(raw_data = leuk, meta_data = leuk_meta)
+leuk_over = oversample$raw_data
+leuk_meta_over = oversample$meta_data
+table(leuk_meta_over$Class, leuk_meta_over$Batch)
+```
+
+```{r}
+doppel_ag_over = getPPCCDoppelgangers(leuk_over, leuk_meta_over)
+```
+```{r}
+doppel_ag_over = remove_all_dup(doppel_ag_over)
+```
+
+When we balance the batches before doppelganger identification. 35 doppelgangers were identified (More than previous).
+
+```{r}
+table(doppel_ag_over$PPCC_df$DoppelgangerLabel)
+```
+
+These 7 pairs were identified as doppelgangers when samples were balanced. 
+
+```{r}
+dfSetDifference(
+  doppel_ag_over$PPCC_df[
+    doppel_ag_over$PPCC_df$DoppelgangerLabel=="Doppelganger",], doppel_ag$PPCC_df[
+    doppel_ag$PPCC_df$DoppelgangerLabel=="Doppelganger",])
+```
+
+```{r}
+visualisePPCCDoppelgangers(doppel_ag_over)
+```
+
+```{r}
+summary(doppel_ag$PPCC_df$PPCC)
+```
+
+```{r}
+summary(doppel_ag_over$PPCC_df$PPCC)
+```
+
+Only slight differences (decrease) in PPCC distribution after oversampling.
+
+### c) Batch imbalance on batch correction efficacy
+
+```{r}
+if (!"ggfortify" %in% installed.packages()){
+  install.packages("ggfortify")
+}
+library(ggfortify)
+```
+
+#### Before Batch Correction
+```{r}
+pca_res = prcomp(t(leuk), scale. = TRUE)
+autoplot(x=1, y=2, pca_res, data = leuk_meta, colour = 'Class', shape="Batch")
+```
+
+```{r}
+autoplot(x=2, y=3, pca_res, data = leuk_meta, colour = 'Class', shape="Batch")
+```
+
+#### With batch imbalance
+
+```{r}
+pca_res = prcomp(t(doppel_ag$Batch_corrected), scale. = TRUE)
+autoplot(x=1, y=2, pca_res, data = leuk_meta, colour = 'Class', shape="Batch")
+```
+```{r}
+autoplot(x=2, y=3, pca_res, data = leuk_meta, colour = 'Class', shape="Batch")
+```
+
+#### Without batch imbalance
+
+```{r}
+pca_res = prcomp(t(doppel_ag_over$Batch_corrected), scale. = TRUE)
+autoplot(x=1, y=2, pca_res, data = leuk_meta, colour = 'Class', shape="Batch")
+```
+
+```{r}
+autoplot(x=2, y=3, pca_res, data = leuk_meta, colour = 'Class', shape="Batch")
+```
+
+Output information from above into excel for planning purposes.
+
+```{r}
+if (!"openxlsx" %in% installed.packages()){
+  install.packages("openxlsx")
+}
+library(openxlsx)
+wb = createWorkbook()
+addWorksheet(wb, "MetaData")
+addWorksheet(wb, "DoppelgangerPairs")
+addWorksheet(wb, "ExtraPairs_Bal-Unbal")
+addWorksheet(wb, "DoppelgangerSamplesA")
+addWorksheet(wb, "DoppelgangerSamplesG")
+
+writeData(wb, 1, leuk_meta)
+writeData(wb, 2, doppel_ag_over$PPCC_df[
+  doppel_ag_over$PPCC_df$DoppelgangerLabel=="Doppelganger",])
+writeData(wb, 3, dfSetDifference(
+  doppel_ag_over$PPCC_df[
+    doppel_ag_over$PPCC_df$DoppelgangerLabel=="Doppelganger",], doppel_ag$PPCC_df[
+    doppel_ag$PPCC_df$DoppelgangerLabel=="Doppelganger",]))
+writeData(wb, 4, getDoppelnNonDoppelSamples(
+  doppel_result = doppel_ag_over,
+  metadata = leuk_meta,
+  batchname = "A"))
+writeData(wb, 5, getDoppelnNonDoppelSamples(
+  doppel_result = doppel_ag_over,
+  metadata = leuk_meta,
+  batchname = "G"))
+saveWorkbook(wb, file = "output/leuk_planning.xlsx", overwrite = TRUE)
+```
+
+## 4) Testing for doppelganger effect
+
+```{r}
+veri_results_leuk = doppelgangerVerification(
+      experimentPlanFilename = "cleaned_data/leuk_experiment_plan.csv",
+      raw_data = doppel_ag_over$Batch_corrected,
+      meta_data = leuk_meta,
+      do.batch.corr = FALSE)
+```
+```{r fig.width=10, fig.height=5}
+originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4","Doppel_6","Doppel_8", "Doppel_10", "Neg_Con", "Pos_Con")
+
+newTrainValidNames =  c("0 Doppel", "2 Doppel", "4 Doppel","6 Doppel","8 Doppel", "10 Doppel", "Neg Con", "Pos Con")
+
+displayVerificationResults(functionalityResults = veri_results_leuk,
+                originalTrainValidNames = originalTrainValidNames,
+                newTrainValidNames = newTrainValidNames)
+```
+## Extra findings
+
+The importance of balanced batches for verification step
+
+```{r fig.width=10, fig.height=5}
+veri_results_leuk_extra = doppelgangerVerification(
+      experimentPlanFilename = "cleaned_data/leuk_experiment_plan.csv",
+      raw_data = leuk,
+      meta_data = leuk_meta)
+
+originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4","Doppel_6","Doppel_8", "Doppel_10", "Neg_Con", "Pos_Con")
+
+newTrainValidNames =  c("0 Doppel", "2 Doppel", "4 Doppel","6 Doppel","8 Doppel", "10 Doppel", "Neg Con", "Pos Con")
+
+displayVerificationResults(functionalityResults = veri_results_leuk_extra,
+                originalTrainValidNames = originalTrainValidNames,
+                newTrainValidNames = newTrainValidNames)
+
+```
+
+## Arranging plots
+
+```{r fig.height=4, fig.width=8}
+if (!"ggpubr" %in% installed.packages()){
+  install.packages("ggpubr")
+}
+library(ggpubr)
+
+leuk_plot1 = ggarrange(
+          ggpar(visualisePPCCDoppelgangers(doppel_ag) +
+            coord_cartesian(ylim = c(0.58, 1)),
+            title="Unbalanced Batches"), 
+          ggpar(visualisePPCCDoppelgangers(doppel_ag_over) +
+            coord_cartesian(ylim = c(0.58, 1)),
+            title="Balanced Batches")+ 
+          rremove("ylab") +
+          rremove("y.ticks")+
+          rremove("y.text"), 
+          align='h', 
+          labels=c('A', 'B'),
+          common.legend = T,
+          legend = "bottom"
+          )
+leuk_plot1 = annotate_figure(leuk_plot1, 
+                            top = text_grob("Leukaemia PPCC Distribution & Doppelganger identification", 
+               color = "black",
+               face = "bold", 
+               size = 18))
+leuk_plot1
+ggsave(filename = "./images/leuk_PPCC.tiff", width = 8, height = 4, device='tiff')
+```
+```{r fig.width=10, fig.height=5}
+originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4","Doppel_6","Doppel_8", "Doppel_10", "Neg_Con", "Pos_Con")
+
+newTrainValidNames =  c("0 Doppel", "2 Doppel\n (Only In\n Balanced)", "4 Doppel","6 Doppel","8 Doppel", "10 Doppel", "Neg Con", "10 Pos Con")
+
+leuk_plot2 = displayVerificationResults(functionalityResults = veri_results_leuk,
+                originalTrainValidNames = originalTrainValidNames,
+                newTrainValidNames = newTrainValidNames)
+leuk_plot2 = ggpar(leuk_plot2, title="Validation Accuracy of KNN Models (Leukaemia)") +
+  font("title", size = 18, color = "black", face = "bold") +
+  font("xlab", size = 14, color = "black") +
+  font("xylab", size = 14, color = "black") +
+  font("xy.text", size = 11, color = "black") +
+  font("legend.title", size = 14, color = "black") +
+  font("legend.text", size = 11, color = "black")
+leuk_plot2
+ggsave(filename = "./images/leuk_veri.tiff", width = 10, height = 5, device='tiff')
+```
+
