@@ -442,7 +442,8 @@ veri_results_leuk = doppelgangerVerification(
       experimentPlanFilename = "cleaned_data/leuk_experiment_plan.csv",
       raw_data = doppel_ag_over$Batch_corrected,
       meta_data = leuk_meta,
-      do.batch.corr = FALSE)
+      do.batch.corr = FALSE,
+      k=7)
 ```
 ```{r fig.width=10, fig.height=5}
 originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4","Doppel_6","Doppel_8", "Doppel_10", "Neg_Con", "Pos_Con")
@@ -472,6 +473,26 @@ displayVerificationResults(functionalityResults = veri_results_leuk_extra,
                 newTrainValidNames = newTrainValidNames)
 
 ```
+
+The importance of k in verification
+
+```{r fig.width=10, fig.height=5}
+veri_results_leuk_extra = doppelgangerVerification(
+      experimentPlanFilename = "cleaned_data/leuk_experiment_plan.csv",
+      raw_data = leuk,
+      meta_data = leuk_meta,
+      k=7)
+
+originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4","Doppel_6","Doppel_8", "Doppel_10", "Neg_Con", "Pos_Con")
+
+newTrainValidNames =  c("0 Doppel", "2 Doppel", "4 Doppel","6 Doppel","8 Doppel", "10 Doppel", "Neg Con", "Pos Con")
+
+displayVerificationResults(functionalityResults = veri_results_leuk_extra,
+                originalTrainValidNames = originalTrainValidNames,
+                newTrainValidNames = newTrainValidNames)
+
+```
+
 
 ## Arranging plots
 
