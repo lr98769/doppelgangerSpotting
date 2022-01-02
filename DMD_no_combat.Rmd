@@ -276,7 +276,7 @@ We will now test if the PPCC data doppelgangers identified above (without batch 
 **a) First, carry out functional doppelganger verification with batch correction prior to model training and validation. **
 
 ```{r}
-veri_results_dmd_no_combat =  doppelgangerVerification(
+veri_results_dmd_no_combat =  verifyDoppelgangers(
   experimentPlanFilename = "cleaned_data/dmd_no_combat_experiment_plan.csv",
   raw_data = dmd,
   meta_data = dmd_meta,
@@ -289,7 +289,7 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_2","Doppel_4","Doppel_6", "Dopp
 
 newTrainValidNames =  c("0 Doppel", "2 Doppel", "4 Doppel", "6 Doppel", "8 Doppel","10 Doppel","Pos Con 10", "Neg Con")
 
-displayVerificationResults(functionalityResults = veri_results_dmd_no_combat,
+visualiseVerificationResults(veri_results_dmd_no_combat,
                 originalTrainValidNames = originalTrainValidNames,
                 newTrainValidNames = newTrainValidNames)
 ```
@@ -299,7 +299,7 @@ When the data set was batch corrected before training and validation, an inflati
 **b) Next, we will observe the validation accuracies when no batch correction is done prior to model training and validation.  **
 
 ```{r}
-veri_results_dmd_no_combat =  doppelgangerVerification(
+veri_results_dmd_no_combat =  verifyDoppelgangers(
   experimentPlanFilename = "cleaned_data/dmd_no_combat_experiment_plan.csv",
   raw_data = dmd,
   meta_data = dmd_meta,
@@ -312,7 +312,7 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_2","Doppel_4","Doppel_6", "Dopp
 
 newTrainValidNames =  c("0 Doppel", "2 Doppel", "4 Doppel", "6 Doppel", "8 Doppel","10 Doppel","Pos Con 10", "Neg Con")
 
-displayVerificationResults(functionalityResults = veri_results_dmd_no_combat,
+visualiseVerificationResults(veri_results_dmd_no_combat,
                 originalTrainValidNames = originalTrainValidNames,
                 newTrainValidNames = newTrainValidNames)
 ```
@@ -321,7 +321,7 @@ We observe no increase in accuracy as the number of PPCC data doppelgangers incr
 **c) Finally, we show the effect of no batch correction during verification on the PPCC Data doppelgangers identified with batch correction**
 
 ```{r}
-veri_results_dmd_no_combat =  doppelgangerVerification(
+veri_results_dmd_no_combat =  verifyDoppelgangers(
   experimentPlanFilename = "cleaned_data/dmd_experiment_plan.csv",
   raw_data = dmd,
   meta_data = dmd_meta,
@@ -333,7 +333,7 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_1","Doppel_2","Doppel_3", "Pos_
 
 newTrainValidNames =  c("0 Doppel", "1 Doppel", "2 Doppel", "3 Doppel", "Pos Con 3", "Neg Con")
 
-displayVerificationResults(functionalityResults = veri_results_dmd_no_combat,
+visualiseVerificationResults(veri_results_dmd_no_combat,
                 originalTrainValidNames = originalTrainValidNames,
                 newTrainValidNames = newTrainValidNames)
 ```

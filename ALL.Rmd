@@ -422,7 +422,7 @@ saveWorkbook(wb, file = "output/all_planning.xlsx", overwrite = TRUE)
 ## 4) Testing the doppelganger effect of identified doppelgangers
 
 ```{r}
-veri_results_all = doppelgangerVerification(
+veri_results_all = verifyDoppelgangers(
   experimentPlanFilename = "cleaned_data/all_experiment_plan.csv",
   raw_data = doppel_am$Batch_corrected,
   meta_data = all_meta,
@@ -434,7 +434,7 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_1_Unbal", "Doppel_1", "Doppel_2
 
 newTrainValidNames =  c("0 Doppel", "1 Doppel Unbal","1 Doppel", "2 Doppel","3 Doppel","4 Doppel", "5 Doppel", "Neg Con", "Pos Con 5")
 
-displayVerificationResults(functionalityResults = veri_results_all,
+visualiseVerificationResults(veri_results_all,
                 originalTrainValidNames = originalTrainValidNames,
                 newTrainValidNames = newTrainValidNames)
 ```
@@ -443,7 +443,7 @@ displayVerificationResults(functionalityResults = veri_results_all,
 What happens if we do not verify using batch balanced data.
 
 ```{r fig.width=10, fig.height=5}
-veri_results_all_extra = doppelgangerVerification(
+veri_results_all_extra = verifyDoppelgangers(
   experimentPlanFilename = "cleaned_data/all_experiment_plan.csv",
   raw_data = all,
   meta_data = all_meta)
@@ -451,7 +451,7 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_1_Unbal", "Doppel_1", "Doppel_2
 
 newTrainValidNames =  c("0 Doppel", "1 Doppel Unbal","1 Doppel", "2 Doppel","3 Doppel","4 Doppel", "5 Doppel", "Neg Con", "Pos Con 5")
 
-displayVerificationResults(functionalityResults = veri_results_all_extra,
+visualiseVerificationResults(veri_results_all_extra,
                 originalTrainValidNames = originalTrainValidNames,
                 newTrainValidNames = newTrainValidNames)
 ```
@@ -491,7 +491,7 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_1_Unbal", "Doppel_1", "Doppel_2
 
 newTrainValidNames =  c("0 Doppel", "1 Doppel\n (Only In\n Unbalanced)","1 Doppel\n (Only In\n Balanced)", "2 Doppel","3 Doppel","4 Doppel", "5 Doppel", "Neg Con", "5 Pos Con")
 
-all_plot2 = displayVerificationResults(functionalityResults = veri_results_all,
+all_plot2 = visualiseVerificationResults(veri_results_all,
                 originalTrainValidNames = originalTrainValidNames,
                 newTrainValidNames = newTrainValidNames)
 all_plot2 = ggpar(all_plot2, title="Validation Accuracy of KNN Models (ALL)") +

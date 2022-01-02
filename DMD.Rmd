@@ -416,7 +416,7 @@ saveWorkbook(wb, file = "output/dmd_planning.xlsx", overwrite = TRUE)
 ## 4) Testing the Doppelganger Effect
 
 ```{r}
-veri_results_dmd =  doppelgangerVerification(
+veri_results_dmd =  verifyDoppelgangers(
   experimentPlanFilename = "cleaned_data/dmd_experiment_plan.csv",
   raw_data = doppel_hp_over$Batch_corrected,
   meta_data = dmd_meta,
@@ -428,7 +428,7 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_1","Doppel_2","Doppel_3", "Pos_
 
 newTrainValidNames =  c("0 Doppel", "1 Doppel", "2 Doppel", "3 Doppel", "Pos Con 3", "Neg Con")
 
-displayVerificationResults(functionalityResults = veri_results_dmd,
+visualiseVerificationResults(veri_results_dmd,
                 originalTrainValidNames = originalTrainValidNames,
                 newTrainValidNames = newTrainValidNames)
 ```
@@ -457,7 +457,7 @@ temp = temp[order(temp$PPCC, decreasing=TRUE),]
 temp
 ```
 ```{r}
-veri_results_dmd_extra =  doppelgangerVerification(
+veri_results_dmd_extra =  verifyDoppelgangers(
   experimentPlanFilename = "cleaned_data/dmd_experiment_plan.csv",
   raw_data = dmd,
   meta_data = dmd_meta)
@@ -465,7 +465,7 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_1","Doppel_2","Doppel_3", "Pos_
 
 newTrainValidNames =  c("0 Doppel", "1 Doppel", "2 Doppel", "3 Doppel", "Pos Con 3", "Neg Con")
 
-displayVerificationResults(functionalityResults = veri_results_dmd_extra,
+visualiseVerificationResults( veri_results_dmd_extra,
                 originalTrainValidNames = originalTrainValidNames,
                 newTrainValidNames = newTrainValidNames)
 ```
@@ -506,7 +506,7 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_1","Doppel_2","Doppel_3", "Pos_
 
 newTrainValidNames =  c("0 Doppel", "1 Doppel", "2 Doppel", "3 Doppel", "3 Pos Con", "Neg Con")
 
-dmd_plot2 = displayVerificationResults(functionalityResults = veri_results_dmd,
+dmd_plot2 = visualiseVerificationResults(veri_results_dmd,
                 originalTrainValidNames = originalTrainValidNames,
                 newTrainValidNames = newTrainValidNames)
 dmd_plot2 = ggpar(dmd_plot2, title="Validation Accuracy of KNN Models (DMD)") + 
@@ -518,6 +518,5 @@ dmd_plot2 = ggpar(dmd_plot2, title="Validation Accuracy of KNN Models (DMD)") +
   font("legend.text", size = 11, color = "black")
 dmd_plot2
 ggsave(filename = "./images/dmd_veri.tiff", width = 10, height = 5, device='tiff')
-```
 ```
 
