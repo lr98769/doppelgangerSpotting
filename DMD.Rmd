@@ -415,8 +415,6 @@ saveWorkbook(wb, file = "output/dmd_planning.xlsx", overwrite = TRUE)
 
 ## 4) Testing the Doppelganger Effect
 
-Since NOR_12_H appears to be anomalous, we will be leaving out NOR_12_H from this experiment. 
-
 ```{r}
 veri_results_dmd =  doppelgangerVerification(
   experimentPlanFilename = "cleaned_data/dmd_experiment_plan.csv",

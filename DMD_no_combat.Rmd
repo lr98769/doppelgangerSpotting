@@ -236,6 +236,8 @@ table(doppel_hp_no_combat$PPCC_df$DoppelgangerLabel)
 ```{r}
 visualisePPCCDoppelgangers(doppel_hp_no_combat)
 ```
+The PPCC values are drastically lower without batch correction, and we also observe no negative PPCC values indicative of an outlier (unlike in DMD.Rmd where batch correction was employed). 
+
 
 Output the doppelgangers for easier planning.
 
@@ -267,3 +269,72 @@ saveWorkbook(wb, file = "output/dmd_no_combat_planning.xlsx", overwrite = TRUE)
 ```
 
 
+## 4) Testing the Doppelganger Effect
+
+We will now test if the PPCC data doppelgangers identified above (without batch correction) are still functional doppelgangers. 
+
+**a) First, carry out functional doppelganger verification with batch correction prior to model training and validation. **
+
+```{r}
+veri_results_dmd_no_combat =  doppelgangerVerification(
+  experimentPlanFilename = "cleaned_data/dmd_no_combat_experiment_plan.csv",
+  raw_data = dmd,
+  meta_data = dmd_meta,
+  do.batch.corr = TRUE,
+  k=5)
+```
+
+```{r fig.width=10, fig.height=5}
+originalTrainValidNames =  c("Doppel_0", "Doppel_2","Doppel_4","Doppel_6", "Doppel_8","Doppel_10","Pos_Con", "Neg_Con")
+
+newTrainValidNames =  c("0 Doppel", "2 Doppel", "4 Doppel", "6 Doppel", "8 Doppel","10 Doppel","Pos Con 10", "Neg Con")
+
+displayVerificationResults(functionalityResults = veri_results_dmd_no_combat,
+                originalTrainValidNames = originalTrainValidNames,
+                newTrainValidNames = newTrainValidNames)
+```
+
+When the data set was batch corrected before training and validation, an inflationary effect can be observed. However, even in the 0 Doppel case, validation accuracy is already very high. This shows that not all functional doppelgangers between the training and validation set were identified when we do not use batch correction in PPCC data doppelganger identification. This demonstrates the importance of batch correction to the identification algorithm. 
+
+**b) Next, we will observe the validation accuracies when no batch correction is done prior to model training and validation.  **
+
+```{r}
+veri_results_dmd_no_combat =  doppelgangerVerification(
+  experimentPlanFilename = "cleaned_data/dmd_no_combat_experiment_plan.csv",
+  raw_data = dmd,
+  meta_data = dmd_meta,
+  do.batch.corr = FALSE,
+  k=5)
+```
+
+```{r fig.width=10, fig.height=5}
+originalTrainValidNames =  c("Doppel_0", "Doppel_2","Doppel_4","Doppel_6", "Doppel_8","Doppel_10","Pos_Con", "Neg_Con")
+
+newTrainValidNames =  c("0 Doppel", "2 Doppel", "4 Doppel", "6 Doppel", "8 Doppel","10 Doppel","Pos Con 10", "Neg Con")
+
+displayVerificationResults(functionalityResults = veri_results_dmd_no_combat,
+                originalTrainValidNames = originalTrainValidNames,
+                newTrainValidNames = newTrainValidNames)
+```
+We observe no increase in accuracy as the number of PPCC data doppelgangers increased between the training and validation set. However, previously (when batch correlation was employed during verification) we observed the presence of the doppelganger effect. This shows the importance of the batch correction step for functional doppelganger verification. In the absence of batch correction, even functional doppelgangers do not display an inflationary effect. 
+
+**c) Finally, we show the effect of no batch correction during verification on the PPCC Data doppelgangers identified with batch correction**
+
+```{r}
+veri_results_dmd_no_combat =  doppelgangerVerification(
+  experimentPlanFilename = "cleaned_data/dmd_experiment_plan.csv",
+  raw_data = dmd,
+  meta_data = dmd_meta,
+  do.batch.corr = FALSE,
+  k=5)
+```
+```{r}
+originalTrainValidNames =  c("Doppel_0", "Doppel_1","Doppel_2","Doppel_3", "Pos_Con_3", "Neg_Con")
+
+newTrainValidNames =  c("0 Doppel", "1 Doppel", "2 Doppel", "3 Doppel", "Pos Con 3", "Neg Con")
+
+displayVerificationResults(functionalityResults = veri_results_dmd_no_combat,
+                originalTrainValidNames = originalTrainValidNames,
+                newTrainValidNames = newTrainValidNames)
+```
+Once again, we observe no inflationary effects in the absence of batch correction during verification. This further emphasizes the importance of batch correction in the verification step. 
