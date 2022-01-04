@@ -177,95 +177,95 @@ remove_all_dup <-function(doppel_result){
 
 
 ## 1) Importing the Datsets
-AllenData
+AllenData/ Ross et al.
 - 15 BCR
 - 18 E2A
 
 ```{r}
-all_a = getDataFile(filename = "data/Subtype-AllenData.csv",
+all_r = getDataFile(filename = "data/Subtype-AllenData.csv",
                     affy_attribute = "affy_hg_u133a",
-                    batch_name = "A")
-all_a_meta = getMetaDataDataframe(df = all_a,
-                                  batch_name = "A")
+                    batch_name = "R")
+all_r_meta = getMetaDataDataframe(df = all_r,
+                                  batch_name = "R")
 ```
 
-MaryData
+MaryData/Yeoh et al.
 - 15 BCR
 - 27 E2A
 
 ```{r}
-all_m = getDataFile(filename = "data/Subtype-MaryData.csv",
+all_y = getDataFile(filename = "data/Subtype-MaryData.csv",
                     affy_attribute = "affy_hg_u95av2",
-                    batch_name = "M")
-all_m_meta = getMetaDataDataframe(df = all_m,
-                                  batch_name = "M")
+                    batch_name = "Y")
+all_y_meta = getMetaDataDataframe(df = all_y,
+                                  batch_name = "Y")
 ```
 
 ## 2) Finding Doppelgangers
 
-### a) Within Allen Data
+### a) Within Ross et Al.
 
 ```{r}
-doppel_all_a = getPPCCDoppelgangers(all_a, all_a_meta)
+doppel_all_r = getPPCCDoppelgangers(all_r, all_r_meta)
 ```
 
 ```{r}
-visualisePPCCDoppelgangers(doppel_all_a)
+visualisePPCCDoppelgangers(doppel_all_r)
 ```
-48 Doppelgangers within Allen Data.
+48 Doppelgangers within Ross et al.
 
 ```{r}
-table(doppel_all_a$PPCC_df$DoppelgangerLabel)
+table(doppel_all_r$PPCC_df$DoppelgangerLabel)
 ```
 
-### b) Within Mary Data
+### b) Within Yeoh et al.
 
 ```{r}
-doppel_m = getPPCCDoppelgangers(all_m, all_m_meta)
+doppel_y = getPPCCDoppelgangers(all_y, all_y_meta)
 ```
 
 ```{r}
-visualisePPCCDoppelgangers(doppel_m)
+visualisePPCCDoppelgangers(doppel_y)
 ```
 
-There are 114 Doppelgangers in Mary Data.
+There are 114 Doppelgangers in Yeoh et al.
 
 ```{r}
-table(doppel_m$PPCC_df$DoppelgangerLabel)
+table(doppel_y$PPCC_df$DoppelgangerLabel)
 ```
 
-### c) Between Allen and Mary
+### c) Between Ross and Yeoh
 
 ```{r}
 shared_variables_all =  intersect(
-                          rownames(all_a),
-                          rownames(all_m))
-all = data.frame(cbind(all_a[shared_variables_all,],
-                       all_m[shared_variables_all,]))
-all_meta = data.frame(rbind(all_a_meta, all_m_meta))
-doppel_am = getPPCCDoppelgangers(all, all_meta)
+                          rownames(all_r),
+                          rownames(all_y))
+all = data.frame(cbind(all_r[shared_variables_all,],
+                       all_y[shared_variables_all,]))
+all_meta = data.frame(rbind(all_r_meta, all_y_meta))
+doppel_ry = getPPCCDoppelgangers(all, all_meta)
 ```
 Only 6 Doppelgangers between AllenData and MaryData.
 
 ```{r}
-table(doppel_am$PPCC_df$DoppelgangerLabel)
+table(doppel_ry$PPCC_df$DoppelgangerLabel)
 ```
 
 ```{r}
-doppel_am$PPCC_df[doppel_am$PPCC_df$DoppelgangerLabel=="Doppelganger",]
+doppel_ry$PPCC_df[doppel_ry$PPCC_df$DoppelgangerLabel=="Doppelganger",]
 ```
 ```{r}
-doppel_am$cut_off
+doppel_ry$cut_off
 ```
 
 ```{r}
-visualisePPCCDoppelgangers(doppel_am)
+visualisePPCCDoppelgangers(doppel_ry)
 ```
 ## 3) Batch Imbalance on Doppelganger Identification
 
 Since sva:Combat is used in the doppelgangerIdentifier and batch imbalance affects the efficacy of batch correction, we will now be exploring the impacts of batch imbalance on doppelgangerIdentifier's performance. 
 
-AllenData and MaryData do not have the same sample size. To test the impact of batch imbalance, we test the case with imbalance (the previous result) and the case with no imbalance (oversampling of AllenData)
+Ross and Yeoh do not have the same sample size. To test the impact of batch imbalance, we test the case with imbalance (the previous result) and the case with no imbalance (oversampling of Ross).
 
 ```{r}
 table(all_meta$Batch)
@@ -277,7 +277,7 @@ We identify 6 doppelgangers can seen in the previous section.
 
 ### b) If we balance the batches before we identify doppelgangers
 
-We will now over sample AllenData
+We will now over sample Ross
 
 ```{r}
 oversample = oversample_batch(all, all_meta)
@@ -287,48 +287,48 @@ table(all_meta_over$Class, all_meta_over$Batch)
 ```
 
 ```{r}
-doppel_am_over = getPPCCDoppelgangers(all_over, all_meta_over)
+doppel_ry_over = getPPCCDoppelgangers(all_over, all_meta_over)
 ```
 
 Remove extra pairs
 ```{r}
-doppel_am_over = remove_all_dup(doppel_am_over)
+doppel_ry_over = remove_all_dup(doppel_ry_over)
 ```
 
 When batches are balanced, 6 doppelgangers were identified.
 
 ```{r}
-table(doppel_am_over$PPCC_df$DoppelgangerLabel)
+table(doppel_ry_over$PPCC_df$DoppelgangerLabel)
 ```
 
 ```{r}
 dfSetDifference(
-  doppel_am_over$PPCC_df
-  [doppel_am_over$PPCC_df$DoppelgangerLabel=="Doppelganger",],
-  doppel_am$PPCC_df
-  [doppel_am$PPCC_df$DoppelgangerLabel=="Doppelganger",]
+  doppel_ry_over$PPCC_df
+  [doppel_ry_over$PPCC_df$DoppelgangerLabel=="Doppelganger",],
+  doppel_ry$PPCC_df
+  [doppel_ry$PPCC_df$DoppelgangerLabel=="Doppelganger",]
   )
 ```
 
 ```{r}
 dfSetDifference(
-  doppel_am$PPCC_df
-  [doppel_am$PPCC_df$DoppelgangerLabel=="Doppelganger",],
-  doppel_am_over$PPCC_df
-  [doppel_am_over$PPCC_df$DoppelgangerLabel=="Doppelganger",]
+  doppel_ry$PPCC_df
+  [doppel_ry$PPCC_df$DoppelgangerLabel=="Doppelganger",],
+  doppel_ry_over$PPCC_df
+  [doppel_ry_over$PPCC_df$DoppelgangerLabel=="Doppelganger",]
   )
 ```
 
 
 ```{r}
-visualisePPCCDoppelgangers(doppel_am_over)
+visualisePPCCDoppelgangers(doppel_ry_over)
 ```
 ```{r}
-summary(doppel_am$PPCC_df$PPCC)
+summary(doppel_ry$PPCC_df$PPCC)
 ```
 
 ```{r}
-summary(doppel_am_over$PPCC_df$PPCC)
+summary(doppel_ry_over$PPCC_df$PPCC)
 ```
 
 When batches were balanced before doppelganger identification, PPCC decreased slightly. 
@@ -355,7 +355,7 @@ autoplot(x=2, y=3, pca_res, data = all_meta, colour = 'Class', shape="Batch")
 #### With batch imbalance
 
 ```{r}
-pca_res = prcomp(t(doppel_am$Batch_corrected), scale. = TRUE)
+pca_res = prcomp(t(doppel_ry$Batch_corrected), scale. = TRUE)
 autoplot(x=1, y=2, pca_res, data = all_meta, colour = 'Class', shape="Batch")
 ```
 
@@ -366,7 +366,7 @@ autoplot(x=2, y=3, pca_res, data = all_meta, colour = 'Class', shape="Batch")
 #### Without batch imbalance
 
 ```{r}
-pca_res = prcomp(t(doppel_am_over$Batch_corrected), scale. = TRUE)
+pca_res = prcomp(t(doppel_ry_over$Batch_corrected), scale. = TRUE)
 autoplot(x=1, y=2, pca_res, data = all_meta, colour = 'Class', shape="Batch")
 ```
 
@@ -391,31 +391,31 @@ addWorksheet(wb, "DoppelgangerSamplesM")
 
 writeData(wb, 1, all_meta)
 writeData(wb, 2, 
-          doppel_am_over$PPCC_df
-          [doppel_am_over$PPCC_df$DoppelgangerLabel=="Doppelganger",])
+          doppel_ry_over$PPCC_df
+          [doppel_ry_over$PPCC_df$DoppelgangerLabel=="Doppelganger",])
 
 writeData(wb, 3, dfSetDifference(
-  doppel_am_over$PPCC_df
-  [doppel_am_over$PPCC_df$DoppelgangerLabel=="Doppelganger",],
-  doppel_am$PPCC_df
-  [doppel_am$PPCC_df$DoppelgangerLabel=="Doppelganger",]
+  doppel_ry_over$PPCC_df
+  [doppel_ry_over$PPCC_df$DoppelgangerLabel=="Doppelganger",],
+  doppel_ry$PPCC_df
+  [doppel_ry$PPCC_df$DoppelgangerLabel=="Doppelganger",]
   )
 )
 writeData(wb, 4, dfSetDifference(
-  doppel_am$PPCC_df
-  [doppel_am$PPCC_df$DoppelgangerLabel=="Doppelganger",],
-  doppel_am_over$PPCC_df
-  [doppel_am_over$PPCC_df$DoppelgangerLabel=="Doppelganger",]
+  doppel_ry$PPCC_df
+  [doppel_ry$PPCC_df$DoppelgangerLabel=="Doppelganger",],
+  doppel_ry_over$PPCC_df
+  [doppel_ry_over$PPCC_df$DoppelgangerLabel=="Doppelganger",]
   )
 )
 writeData(wb, 5, getDoppelnNonDoppelSamples(
-  doppel_result = doppel_am_over,
+  doppel_result = doppel_ry_over,
   metadata = all_meta,
-  batchname = "A"))
+  batchname = "R"))
 writeData(wb, 6, getDoppelnNonDoppelSamples(
-  doppel_result = doppel_am_over,
+  doppel_result = doppel_ry_over,
   metadata = all_meta,
-  batchname = "M"))
+  batchname = "Y"))
 saveWorkbook(wb, file = "output/all_planning.xlsx", overwrite = TRUE)
 ```
 
@@ -424,7 +424,7 @@ saveWorkbook(wb, file = "output/all_planning.xlsx", overwrite = TRUE)
 ```{r}
 veri_results_all = verifyDoppelgangers(
   experimentPlanFilename = "cleaned_data/all_experiment_plan.csv",
-  raw_data = doppel_am$Batch_corrected,
+  raw_data = doppel_ry_over$Batch_corrected,
   meta_data = all_meta,
   do.batch.corr = FALSE)
 ```
@@ -464,10 +464,10 @@ if (!"ggpubr" %in% installed.packages()){
 library(ggpubr)
 
 all_plot1 = ggarrange(
-          ggpar(visualisePPCCDoppelgangers(doppel_am) +
+          ggpar(visualisePPCCDoppelgangers(doppel_ry) +
             coord_cartesian(ylim = c(0.75, 1)),
             title="Unbalanced Batches"), 
-          ggpar(visualisePPCCDoppelgangers(doppel_am_over) +
+          ggpar(visualisePPCCDoppelgangers(doppel_ry_over) +
             coord_cartesian(ylim = c(0.75, 1)),
             title="Balanced Batches")+ 
           rremove("ylab") +
