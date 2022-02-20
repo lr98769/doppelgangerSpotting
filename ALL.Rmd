@@ -1,6 +1,8 @@
 ---
 title: "The Doppelganger Effect in Biomedical Data sets"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 # 3. Exploring the ALL (Acute Lymphocytic Leukemia) Datasets
@@ -423,10 +425,11 @@ saveWorkbook(wb, file = "output/all_planning.xlsx", overwrite = TRUE)
 
 ```{r}
 veri_results_all = verifyDoppelgangers(
-  experimentPlanFilename = "cleaned_data/all_experiment_plan.csv",
-  raw_data = doppel_ry_over$Batch_corrected,
-  meta_data = all_meta,
-  do.batch.corr = FALSE)
+  "cleaned_data/all_experiment_plan.csv",
+  doppel_ry_over$Batch_corrected,
+  all_meta,
+  do_batch_corr = FALSE,
+  size_of_val_set = 10)
 ```
 
 ```{r fig.width=10, fig.height=5}
@@ -435,8 +438,8 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_1_Unbal", "Doppel_1", "Doppel_2
 newTrainValidNames =  c("0 Doppel", "1 Doppel Unbal","1 Doppel", "2 Doppel","3 Doppel","4 Doppel", "5 Doppel", "Neg Con", "Pos Con 5")
 
 visualiseVerificationResults(veri_results_all,
-                originalTrainValidNames = originalTrainValidNames,
-                newTrainValidNames = newTrainValidNames)
+                originalTrainValidNames,
+                newTrainValidNames)
 ```
 ## Extra Findings
 
@@ -444,16 +447,17 @@ What happens if we do not verify using batch balanced data.
 
 ```{r fig.width=10, fig.height=5}
 veri_results_all_extra = verifyDoppelgangers(
-  experimentPlanFilename = "cleaned_data/all_experiment_plan.csv",
-  raw_data = all,
-  meta_data = all_meta)
+  "cleaned_data/all_experiment_plan.csv",
+  all,
+  all_meta,
+  size_of_val_set = 10)
 originalTrainValidNames =  c("Doppel_0", "Doppel_1_Unbal", "Doppel_1", "Doppel_2","Doppel_3","Doppel_4", "Doppel_5", "Neg_Con", "Pos_Con_5")
 
 newTrainValidNames =  c("0 Doppel", "1 Doppel Unbal","1 Doppel", "2 Doppel","3 Doppel","4 Doppel", "5 Doppel", "Neg Con", "Pos Con 5")
 
 visualiseVerificationResults(veri_results_all_extra,
-                originalTrainValidNames = originalTrainValidNames,
-                newTrainValidNames = newTrainValidNames)
+                originalTrainValidNames,
+                newTrainValidNames)
 ```
 ## Arrange plots
 
@@ -492,8 +496,8 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_1_Unbal", "Doppel_1", "Doppel_2
 newTrainValidNames =  c("0 Doppel", "1 Doppel\n (Only In\n Unbalanced)","1 Doppel\n (Only In\n Balanced)", "2 Doppel","3 Doppel","4 Doppel", "5 Doppel", "Neg Con", "5 Pos Con")
 
 all_plot2 = visualiseVerificationResults(veri_results_all,
-                originalTrainValidNames = originalTrainValidNames,
-                newTrainValidNames = newTrainValidNames)
+                originalTrainValidNames,
+                newTrainValidNames)
 all_plot2 = ggpar(all_plot2, title="Validation Accuracy of KNN Models (ALL)") +
   font("title", size = 18, color = "black", face = "bold") +
   font("xlab", size = 14, color = "black") +

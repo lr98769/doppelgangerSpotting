@@ -1,6 +1,8 @@
 ---
 title: "The Doppelganger Effect in Biomedical Data sets"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 # 1. Exploring the (Duchenne Muscular Dystrophy) DMD Datasets
@@ -291,7 +293,6 @@ oversample = oversample_batch(dmd, dmd_meta)
 dmd_over = oversample$raw_data
 dmd_meta_over = oversample$meta_data
 table(dmd_meta_over$Batch)
-
 ```
 
 ```{r}
@@ -417,10 +418,12 @@ saveWorkbook(wb, file = "output/dmd_planning.xlsx", overwrite = TRUE)
 
 ```{r}
 veri_results_dmd =  verifyDoppelgangers(
-  experimentPlanFilename = "cleaned_data/dmd_experiment_plan.csv",
-  raw_data = doppel_hp_over$Batch_corrected,
-  meta_data = dmd_meta,
-  do.batch.corr = FALSE)
+  "cleaned_data/dmd_experiment_plan.csv",
+  doppel_hp_over$Batch_corrected,
+  dmd_meta,
+  do_batch_corr = FALSE,
+  size_of_val_set = 6
+  )
 ```
 
 ```{r}
@@ -429,45 +432,20 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_1","Doppel_2","Doppel_3", "Pos_
 newTrainValidNames =  c("0 Doppel", "1 Doppel", "2 Doppel", "3 Doppel", "Pos Con 3", "Neg Con")
 
 visualiseVerificationResults(veri_results_dmd,
-                originalTrainValidNames = originalTrainValidNames,
-                newTrainValidNames = newTrainValidNames)
+                originalTrainValidNames,
+                newTrainValidNames)
 ```
 
 ## Extra Analysis
 
+Exploring PPCC values without batch correction
 ```{r}
-temp = getPPCCDoppelgangers(dmd, dmd_meta, do.batch.corr = FALSE)
+temp = getPPCCDoppelgangers(dmd, 
+                            dmd_meta, 
+                            do_batch_corr = FALSE)
 ```
 ```{r}
 visualisePPCCDoppelgangers(temp)
-```
-
-
-```{r}
-temp = doppel_hp_over$PPCC_df
-temp = temp[temp$ClassPatient=="Different Class\n Different Patient",]
-temp = temp[order(temp$PPCC, decreasing=TRUE),]
-temp
-```
-```{r}
-temp = doppel_hp_over$PPCC_df
-temp = temp[temp$ClassPatient=="Same Class\n Different Patient" &
-              temp$DoppelgangerLabel=="Doppelganger",]
-temp = temp[order(temp$PPCC, decreasing=TRUE),]
-temp
-```
-```{r}
-veri_results_dmd_extra =  verifyDoppelgangers(
-  experimentPlanFilename = "cleaned_data/dmd_experiment_plan.csv",
-  raw_data = dmd,
-  meta_data = dmd_meta)
-originalTrainValidNames =  c("Doppel_0", "Doppel_1","Doppel_2","Doppel_3", "Pos_Con_3", "Neg_Con")
-
-newTrainValidNames =  c("0 Doppel", "1 Doppel", "2 Doppel", "3 Doppel", "Pos Con 3", "Neg Con")
-
-visualiseVerificationResults( veri_results_dmd_extra,
-                originalTrainValidNames = originalTrainValidNames,
-                newTrainValidNames = newTrainValidNames)
 ```
 ## Arrange plots
 
@@ -506,9 +484,10 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_1","Doppel_2","Doppel_3", "Pos_
 
 newTrainValidNames =  c("0 Doppel", "1 Doppel", "2 Doppel", "3 Doppel", "3 Pos Con", "Neg Con")
 
-dmd_plot2 = visualiseVerificationResults(veri_results_dmd,
-                originalTrainValidNames = originalTrainValidNames,
-                newTrainValidNames = newTrainValidNames)
+dmd_plot2 = visualiseVerificationResults(
+                veri_results_dmd,
+                originalTrainValidNames,
+                newTrainValidNames)
 dmd_plot2 = ggpar(dmd_plot2, title="Validation Accuracy of KNN Models (DMD)") + 
   font("title", size = 18, color = "black", face = "bold") +
   font("xlab", size = 14, color = "black") +

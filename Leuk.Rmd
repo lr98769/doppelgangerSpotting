@@ -1,6 +1,8 @@
 ---
 title: "The Doppelganger Effect in Biomedical Data sets"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 # 2. Exploring the Leukemia Datasets
@@ -293,6 +295,7 @@ leuk = data.frame(cbind(leuk_A[shared_variables_leuk,],
 leuk_meta = data.frame(rbind(leuk_A_meta, leuk_G_meta))
 doppel_ag = getPPCCDoppelgangers(leuk, leuk_meta)
 ```
+
 There are 28 doppelgangers between ArmstringData and GolubData.
 
 ```{r}
@@ -439,11 +442,13 @@ saveWorkbook(wb, file = "output/leuk_planning.xlsx", overwrite = TRUE)
 
 ```{r}
 veri_results_leuk = verifyDoppelgangers(
-      experimentPlanFilename = "cleaned_data/leuk_experiment_plan.csv",
-      raw_data = doppel_ag_over$Batch_corrected,
-      meta_data = leuk_meta,
-      do.batch.corr = FALSE,
-      k=7)
+      "cleaned_data/leuk_experiment_plan.csv",
+      doppel_ag_over$Batch_corrected,
+      leuk_meta,
+      do_batch_corr = FALSE,
+      k=7,
+      size_of_val_set = 10
+  )
 ```
 ```{r fig.width=10, fig.height=5}
 originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4","Doppel_6","Doppel_8", "Doppel_10", "Neg_Con", "Pos_Con")
@@ -451,8 +456,8 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4","Doppel_6","Dopp
 newTrainValidNames =  c("0 Doppel", "2 Doppel", "4 Doppel","6 Doppel","8 Doppel", "10 Doppel", "Neg Con", "Pos Con")
 
 visualiseVerificationResults(veri_results_leuk,
-                originalTrainValidNames = originalTrainValidNames,
-                newTrainValidNames = newTrainValidNames)
+                originalTrainValidNames,
+                newTrainValidNames)
 ```
 ## Extra findings
 
@@ -460,40 +465,22 @@ The importance of balanced batches for verification step
 
 ```{r fig.width=10, fig.height=5}
 veri_results_leuk_extra = verifyDoppelgangers(
-      experimentPlanFilename = "cleaned_data/leuk_experiment_plan.csv",
-      raw_data = leuk,
-      meta_data = leuk_meta)
+     "cleaned_data/leuk_experiment_plan.csv",
+      leuk,
+      leuk_meta,
+      k=7,
+      size_of_val_set = 10
+  )
 
 originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4","Doppel_6","Doppel_8", "Doppel_10", "Neg_Con", "Pos_Con")
 
 newTrainValidNames =  c("0 Doppel", "2 Doppel", "4 Doppel","6 Doppel","8 Doppel", "10 Doppel", "Neg Con", "Pos Con")
 
 visualiseVerificationResults(veri_results_leuk_extra,
-                originalTrainValidNames = originalTrainValidNames,
-                newTrainValidNames = newTrainValidNames)
+                originalTrainValidNames,
+                newTrainValidNames)
 
 ```
-
-The importance of k in verification
-
-```{r fig.width=10, fig.height=5}
-veri_results_leuk_extra = verifyDoppelgangers(
-      experimentPlanFilename = "cleaned_data/leuk_experiment_plan.csv",
-      raw_data = leuk,
-      meta_data = leuk_meta,
-      k=7)
-
-originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4","Doppel_6","Doppel_8", "Doppel_10", "Neg_Con", "Pos_Con")
-
-newTrainValidNames =  c("0 Doppel", "2 Doppel", "4 Doppel","6 Doppel","8 Doppel", "10 Doppel", "Neg Con", "Pos Con")
-
-visualiseVerificationResults(veri_results_leuk_extra,
-                originalTrainValidNames = originalTrainValidNames,
-                newTrainValidNames = newTrainValidNames)
-
-```
-
-
 ## Arranging plots
 
 ```{r fig.height=4, fig.width=8}
@@ -525,14 +512,16 @@ leuk_plot1 = annotate_figure(leuk_plot1,
 leuk_plot1
 ggsave(filename = "./images/leuk_PPCC.tiff", width = 8, height = 4, device='tiff')
 ```
+
+
 ```{r fig.width=10, fig.height=5}
 originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4","Doppel_6","Doppel_8", "Doppel_10", "Neg_Con", "Pos_Con")
 
 newTrainValidNames =  c("0 Doppel", "2 Doppel\n (Only In\n Balanced)", "4 Doppel","6 Doppel","8 Doppel", "10 Doppel", "Neg Con", "10 Pos Con")
 
 leuk_plot2 = visualiseVerificationResults(veri_results_leuk,
-                originalTrainValidNames = originalTrainValidNames,
-                newTrainValidNames = newTrainValidNames)
+                 originalTrainValidNames,
+                 newTrainValidNames)
 leuk_plot2 = ggpar(leuk_plot2, title="Validation Accuracy of KNN Models (Leukaemia)") +
   font("title", size = 18, color = "black", face = "bold") +
   font("xlab", size = 14, color = "black") +

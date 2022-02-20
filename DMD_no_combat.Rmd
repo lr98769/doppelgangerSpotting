@@ -225,7 +225,8 @@ dmd = data.frame(cbind(dmd_h[shared_variables_dmd, ],
 Finding doppelgangers between both datasets
 
 ```{r}
-doppel_hp_no_combat = getPPCCDoppelgangers(dmd, dmd_meta, do.batch.corr = FALSE)
+doppel_hp_no_combat = getPPCCDoppelgangers(dmd, dmd_meta, 
+                                           do_batch_corr = FALSE)
 ```
 23 PPCC data Doppelgangers found between HaslettData and PescatoriData.
 
@@ -277,11 +278,12 @@ We will now test if the PPCC data doppelgangers identified above (without batch 
 
 ```{r}
 veri_results_dmd_no_combat =  verifyDoppelgangers(
-  experimentPlanFilename = "cleaned_data/dmd_no_combat_experiment_plan.csv",
-  raw_data = dmd,
-  meta_data = dmd_meta,
-  do.batch.corr = TRUE,
-  k=5)
+  "cleaned_data/dmd_no_combat_experiment_plan.csv",
+  dmd,
+  dmd_meta,
+  do_batch_corr = TRUE,
+  k=5,
+  size_of_val_set = 6)
 ```
 
 ```{r fig.width=10, fig.height=5}
@@ -290,8 +292,8 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_2","Doppel_4","Doppel_6", "Dopp
 newTrainValidNames =  c("0 Doppel", "2 Doppel", "4 Doppel", "6 Doppel", "8 Doppel","10 Doppel","Pos Con 10", "Neg Con")
 
 visualiseVerificationResults(veri_results_dmd_no_combat,
-                originalTrainValidNames = originalTrainValidNames,
-                newTrainValidNames = newTrainValidNames)
+                originalTrainValidNames,
+                newTrainValidNames)
 ```
 
 When the data set was batch corrected before training and validation, an inflationary effect can be observed. However, even in the 0 Doppel case, validation accuracy is already very high. This shows that not all functional doppelgangers between the training and validation set were identified when we do not use batch correction in PPCC data doppelganger identification. This demonstrates the importance of batch correction to the identification algorithm. 
@@ -300,11 +302,13 @@ When the data set was batch corrected before training and validation, an inflati
 
 ```{r}
 veri_results_dmd_no_combat =  verifyDoppelgangers(
-  experimentPlanFilename = "cleaned_data/dmd_no_combat_experiment_plan.csv",
-  raw_data = dmd,
-  meta_data = dmd_meta,
-  do.batch.corr = FALSE,
-  k=5)
+ "cleaned_data/dmd_no_combat_experiment_plan.csv",
+  dmd,
+  dmd_meta,
+  do_batch_corr = FALSE,
+  k=5,
+  size_of_val_set = 6
+ )
 ```
 
 ```{r fig.width=10, fig.height=5}
@@ -313,8 +317,8 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_2","Doppel_4","Doppel_6", "Dopp
 newTrainValidNames =  c("0 Doppel", "2 Doppel", "4 Doppel", "6 Doppel", "8 Doppel","10 Doppel","Pos Con 10", "Neg Con")
 
 visualiseVerificationResults(veri_results_dmd_no_combat,
-                originalTrainValidNames = originalTrainValidNames,
-                newTrainValidNames = newTrainValidNames)
+                originalTrainValidNames,
+                newTrainValidNames)
 ```
 We observe no increase in accuracy as the number of PPCC data doppelgangers increased between the training and validation set. However, previously (when batch correlation was employed during verification) we observed the presence of the doppelganger effect. This shows the importance of the batch correction step for functional doppelganger verification. In the absence of batch correction, even functional doppelgangers do not display an inflationary effect. 
 
@@ -322,19 +326,21 @@ We observe no increase in accuracy as the number of PPCC data doppelgangers incr
 
 ```{r}
 veri_results_dmd_no_combat =  verifyDoppelgangers(
-  experimentPlanFilename = "cleaned_data/dmd_experiment_plan.csv",
-  raw_data = dmd,
-  meta_data = dmd_meta,
-  do.batch.corr = FALSE,
-  k=5)
+  "cleaned_data/dmd_experiment_plan.csv",
+  dmd,
+  dmd_meta,
+  do_batch_corr = FALSE,
+  k=5,
+  size_of_val_set = 6
+  )
 ```
 ```{r}
 originalTrainValidNames =  c("Doppel_0", "Doppel_1","Doppel_2","Doppel_3", "Pos_Con_3", "Neg_Con")
 
-newTrainValidNames =  c("0 Doppel", "1 Doppel", "2 Doppel", "3 Doppel", "Pos Con 3", "Neg Con")
+newTrainValidNames =  c("0 Doppel", "1 Doppel", "2 Doppel", "3 Doppel", "3 Pos Con", "Neg Con")
 
 visualiseVerificationResults(veri_results_dmd_no_combat,
-                originalTrainValidNames = originalTrainValidNames,
-                newTrainValidNames = newTrainValidNames)
+                originalTrainValidNames,
+                newTrainValidNames)
 ```
 Once again, we observe no inflationary effects in the absence of batch correction during verification. This further emphasizes the importance of batch correction in the verification step. 
