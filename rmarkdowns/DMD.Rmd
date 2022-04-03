@@ -1,8 +1,6 @@
 ---
 title: "The Doppelganger Effect in Gene Expression Data sets"
-output:
-  html_document:
-    df_print: paged
+output: rmarkdown::github_document
 ---
 
 # 1. Exploring the (Duchenne Muscular Dystrophy) DMD Datasets

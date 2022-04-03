@@ -1,8 +1,6 @@
 ---
 title: "The Doppelganger Effect in Biomedical Data sets"
-output:
-  html_document:
-    df_print: paged
+output: rmarkdown::github_document
 ---
 
 # 3. Exploring the ALL (Acute Lymphocytic Leukemia) Datasets

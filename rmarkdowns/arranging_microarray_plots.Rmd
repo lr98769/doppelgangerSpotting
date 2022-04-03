@@ -1,6 +1,6 @@
 ---
-title: "R Notebook"
-output: Arrange Plots for Use In the Paper
+title: "Arrange Plots for Use In the Paper"
+output: rmarkdown::github_document
 ---
 
 # DD Identification

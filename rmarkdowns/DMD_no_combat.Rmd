@@ -2,7 +2,7 @@
 title: "DMD Without ComBat"
 author: "Wang Li Rong"
 date: "1/1/2022"
-output: html_document
+output: rmarkdown::github_document
 ---
 
 # 1. Exploring doppelgangerIdentifier without ComBat
@@ -128,7 +128,7 @@ writeData(wb, 4, getDoppelnNonDoppelSamples(
   doppel_result = doppel_hp_no_combat,
   metadata = dmd_meta,
   batchname = "P"))
-saveWorkbook(wb, file = "output/dmd_no_combat_planning.xlsx", overwrite = TRUE)
+saveWorkbook(wb, file = file.path(output_dir, "dmd_no_combat_planning.xlsx"), overwrite = TRUE)
 
 ```
 
@@ -165,7 +165,7 @@ When the data set was batch corrected before training and validation, an inflati
 
 ```{r}
 veri_results_dmd_no_combat =  verifyDoppelgangers(
- "cleaned_data/dmd_no_combat_experiment_plan.csv",
+ file.path(cleaned_data_dir, "dmd_no_combat_experiment_plan.csv"),
   dmd,
   dmd_meta,
   do_batch_corr = FALSE,
