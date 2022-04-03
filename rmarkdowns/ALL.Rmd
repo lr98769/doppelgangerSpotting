@@ -1,0 +1,375 @@
+---
+title: "The Doppelganger Effect in Biomedical Data sets"
+output:
+  html_document:
+    df_print: paged
+---
+
+# 3. Exploring the ALL (Acute Lymphocytic Leukemia) Datasets
+
+## 0) Import packages
+
+```{r Import & Install Packages, include=FALSE}
+if (!("doppelgangerIdentifier" %in% installed.packages())){
+  install.packages('devtools')
+  library(devtools)
+  install_github('lr98769/doppelgangerIdentifier')
+}
+library("doppelgangerIdentifier")
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+if (!("biomaRt" %in% installed.packages())){
+  BiocManager::install("biomaRt")
+}
+library("biomaRt")
+```
+
+File paths
+```{r}
+data_dir = "../data"
+cleaned_data_dir = "../cleaned_data"
+functions_dir = "../functions"
+images_dir = "../images"
+output_dir = "../output"
+```
+
+Load functions for pre-processing and analysis:
+```{r}
+source(file.path(functions_dir,"preprocessing_functions.R"))
+source(file.path(functions_dir,"analysis_functions.R"))
+```
+
+## 1) Importing the Datsets
+AllenData/ Ross et al.
+- 15 BCR
+- 18 E2A
+
+```{r}
+all_r = getDataFile(
+  filename = file.path(data_dir, "Subtype-AllenData.csv"),
+  affy_attribute = "affy_hg_u133a",
+  batch_name = "R")
+all_r_meta = getMetaDataDataframe(df = all_r,
+                                  batch_name = "R")
+```
+
+MaryData/Yeoh et al.
+- 15 BCR
+- 27 E2A
+
+```{r}
+all_y = getDataFile(
+  filename = file.path(data_dir, "Subtype-MaryData.csv"),
+  affy_attribute = "affy_hg_u95av2",
+  batch_name = "Y")
+all_y_meta = getMetaDataDataframe(df = all_y,
+                                  batch_name = "Y")
+```
+
+## 2) Finding Doppelgangers
+
+### a) Within Ross et Al.
+
+```{r}
+doppel_all_r = getPPCCDoppelgangers(all_r, all_r_meta)
+```
+
+```{r}
+visualisePPCCDoppelgangers(doppel_all_r)
+```
+48 Doppelgangers within Ross et al.
+
+```{r}
+table(doppel_all_r$PPCC_df$DoppelgangerLabel)
+```
+
+### b) Within Yeoh et al.
+
+```{r}
+doppel_y = getPPCCDoppelgangers(all_y, all_y_meta)
+```
+
+```{r}
+visualisePPCCDoppelgangers(doppel_y)
+```
+
+There are 114 Doppelgangers in Yeoh et al.
+
+```{r}
+table(doppel_y$PPCC_df$DoppelgangerLabel)
+```
+
+### c) Between Ross and Yeoh
+
+```{r}
+shared_variables_all =  intersect(
+                          rownames(all_r),
+                          rownames(all_y))
+all = data.frame(cbind(all_r[shared_variables_all,],
+                       all_y[shared_variables_all,]))
+all_meta = data.frame(rbind(all_r_meta, all_y_meta))
+doppel_ry = getPPCCDoppelgangers(all, all_meta)
+```
+Only 6 Doppelgangers between AllenData and MaryData.
+
+```{r}
+table(doppel_ry$PPCC_df$DoppelgangerLabel)
+```
+
+```{r}
+doppel_ry$PPCC_df[doppel_ry$PPCC_df$DoppelgangerLabel=="Doppelganger",]
+```
+```{r}
+doppel_ry$cut_off
+```
+
+```{r}
+visualisePPCCDoppelgangers(doppel_ry)
+```
+## 3) Batch Imbalance on Doppelganger Identification
+
+Since sva:Combat is used in the doppelgangerIdentifier and batch imbalance affects the efficacy of batch correction, we will now be exploring the impacts of batch imbalance on doppelgangerIdentifier's performance. 
+
+Ross and Yeoh do not have the same sample size. To test the impact of batch imbalance, we test the case with imbalance (the previous result) and the case with no imbalance (oversampling of Ross).
+
+```{r}
+table(all_meta$Batch)
+```
+
+### a) If we do not balance the batches before doppelganger identification
+
+We identify 6 doppelgangers can seen in the previous section.
+
+### b) If we balance the batches before we identify doppelgangers
+
+We will now over sample Ross
+
+```{r}
+oversample = oversample_batch(all, all_meta)
+all_over = oversample$raw_data
+all_meta_over = oversample$meta_data
+table(all_meta_over$Class, all_meta_over$Batch)
+```
+
+```{r}
+doppel_ry_over = getPPCCDoppelgangers(all_over, all_meta_over)
+```
+
+Remove extra pairs
+```{r}
+doppel_ry_over = remove_all_dup(doppel_ry_over)
+```
+
+When batches are balanced, 6 doppelgangers were identified.
+
+```{r}
+table(doppel_ry_over$PPCC_df$DoppelgangerLabel)
+```
+
+```{r}
+dfSetDifference(
+  doppel_ry_over$PPCC_df
+  [doppel_ry_over$PPCC_df$DoppelgangerLabel=="Doppelganger",],
+  doppel_ry$PPCC_df
+  [doppel_ry$PPCC_df$DoppelgangerLabel=="Doppelganger",]
+  )
+```
+
+```{r}
+dfSetDifference(
+  doppel_ry$PPCC_df
+  [doppel_ry$PPCC_df$DoppelgangerLabel=="Doppelganger",],
+  doppel_ry_over$PPCC_df
+  [doppel_ry_over$PPCC_df$DoppelgangerLabel=="Doppelganger",]
+  )
+```
+
+
+```{r}
+visualisePPCCDoppelgangers(doppel_ry_over)
+```
+```{r}
+summary(doppel_ry$PPCC_df$PPCC)
+```
+
+```{r}
+summary(doppel_ry_over$PPCC_df$PPCC)
+```
+
+When batches were balanced before doppelganger identification, PPCC decreased slightly. 
+
+### c) Batch imbalance on batch correction efficacy
+
+```{r}
+if (!"ggfortify" %in% installed.packages()){
+  install.packages("ggfortify")
+}
+library(ggfortify)
+```
+
+#### Before Batch Correction
+```{r}
+pca_res = prcomp(t(all), scale. = TRUE)
+autoplot(x=1, y=2, pca_res, data = all_meta, colour = 'Class', shape="Batch")
+```
+
+```{r}
+autoplot(x=2, y=3, pca_res, data = all_meta, colour = 'Class', shape="Batch")
+```
+
+#### With batch imbalance
+
+```{r}
+pca_res = prcomp(t(doppel_ry$Batch_corrected), scale. = TRUE)
+autoplot(x=1, y=2, pca_res, data = all_meta, colour = 'Class', shape="Batch")
+```
+
+```{r}
+autoplot(x=2, y=3, pca_res, data = all_meta, colour = 'Class', shape="Batch")
+```
+
+#### Without batch imbalance
+
+```{r}
+pca_res = prcomp(t(doppel_ry_over$Batch_corrected), scale. = TRUE)
+autoplot(x=1, y=2, pca_res, data = all_meta, colour = 'Class', shape="Batch")
+```
+
+```{r}
+autoplot(x=2, y=3, pca_res, data = all_meta, colour = 'Class', shape="Batch")
+```
+
+Output information from above into excel for planning purposes.
+
+```{r}
+if (!"openxlsx" %in% installed.packages()){
+  install.packages("openxlsx")
+}
+library(openxlsx)
+wb = createWorkbook()
+addWorksheet(wb, "MetaData")
+addWorksheet(wb, "DoppelgangerPairs")
+addWorksheet(wb, "ExtraPairs_Bal-Unbal")
+addWorksheet(wb, "ExtraPairs_Unbal-Bal")
+addWorksheet(wb, "DoppelgangerSamplesA")
+addWorksheet(wb, "DoppelgangerSamplesM")
+
+writeData(wb, 1, all_meta)
+writeData(wb, 2, 
+          doppel_ry_over$PPCC_df
+          [doppel_ry_over$PPCC_df$DoppelgangerLabel=="Doppelganger",])
+
+writeData(wb, 3, dfSetDifference(
+  doppel_ry_over$PPCC_df
+  [doppel_ry_over$PPCC_df$DoppelgangerLabel=="Doppelganger",],
+  doppel_ry$PPCC_df
+  [doppel_ry$PPCC_df$DoppelgangerLabel=="Doppelganger",]
+  )
+)
+writeData(wb, 4, dfSetDifference(
+  doppel_ry$PPCC_df
+  [doppel_ry$PPCC_df$DoppelgangerLabel=="Doppelganger",],
+  doppel_ry_over$PPCC_df
+  [doppel_ry_over$PPCC_df$DoppelgangerLabel=="Doppelganger",]
+  )
+)
+writeData(wb, 5, getDoppelnNonDoppelSamples(
+  doppel_result = doppel_ry_over,
+  metadata = all_meta,
+  batchname = "R"))
+writeData(wb, 6, getDoppelnNonDoppelSamples(
+  doppel_result = doppel_ry_over,
+  metadata = all_meta,
+  batchname = "Y"))
+saveWorkbook(wb, file = "output/all_planning.xlsx", overwrite = TRUE)
+```
+
+## 4) Testing the doppelganger effect of identified doppelgangers
+
+```{r}
+veri_results_all = verifyDoppelgangers(
+  file.path(cleaned_data_dir, "all_experiment_plan.csv"),
+  doppel_ry_over$Batch_corrected,
+  all_meta,
+  do_batch_corr = FALSE,
+  size_of_val_set = 10)
+```
+
+```{r fig.width=10, fig.height=5}
+originalTrainValidNames =  c("Doppel_0", "Doppel_1_Unbal", "Doppel_1", "Doppel_2","Doppel_3","Doppel_4", "Doppel_5", "Neg_Con", "Pos_Con_5")
+
+newTrainValidNames =  c("0 Doppel", "1 Doppel Unbal","1 Doppel", "2 Doppel","3 Doppel","4 Doppel", "5 Doppel", "Neg Con", "Pos Con 5")
+
+visualiseVerificationResults(veri_results_all,
+                originalTrainValidNames,
+                newTrainValidNames)
+```
+## Extra Findings
+
+What happens if we do not verify using batch balanced data.
+
+```{r fig.width=10, fig.height=5}
+veri_results_all_extra = verifyDoppelgangers(
+  file.path(cleaned_data_dir, "all_experiment_plan.csv"),
+  all,
+  all_meta,
+  size_of_val_set = 10)
+originalTrainValidNames =  c("Doppel_0", "Doppel_1_Unbal", "Doppel_1", "Doppel_2","Doppel_3","Doppel_4", "Doppel_5", "Neg_Con", "Pos_Con_5")
+
+newTrainValidNames =  c("0 Doppel", "1 Doppel Unbal","1 Doppel", "2 Doppel","3 Doppel","4 Doppel", "5 Doppel", "Neg Con", "Pos Con 5")
+
+visualiseVerificationResults(veri_results_all_extra,
+                originalTrainValidNames,
+                newTrainValidNames)
+```
+## Arrange plots
+
+```{r fig.height=4, fig.width=8}
+if (!"ggpubr" %in% installed.packages()){
+  install.packages("ggpubr")
+}
+library(ggpubr)
+
+all_plot1 = ggarrange(
+          ggpar(visualisePPCCDoppelgangers(doppel_ry) +
+            coord_cartesian(ylim = c(0.75, 1)),
+            title="Unbalanced Batches"), 
+          ggpar(visualisePPCCDoppelgangers(doppel_ry_over) +
+            coord_cartesian(ylim = c(0.75, 1)),
+            title="Balanced Batches")+ 
+          rremove("ylab") +
+          rremove("y.ticks")+
+          rremove("y.text"), 
+          align='h', 
+          labels=c('A', 'B'),
+          common.legend = T,
+          legend = "bottom"
+          )
+all_plot1 = annotate_figure(all_plot1, 
+                            top = text_grob("ALL PPCC Distribution & Doppelganger identification", 
+               color = "black",
+               face = "bold", 
+               size = 18))
+all_plot1
+ggsave(filename = file.path(images_dir, "all_PPCC.tiff"), width = 8, height = 4, device='tiff')
+```
+```{r fig.width=11, fig.height=5}
+originalTrainValidNames =  c("Doppel_0", "Doppel_1_Unbal", "Doppel_1", "Doppel_2","Doppel_3","Doppel_4", "Doppel_5", "Neg_Con", "Pos_Con_5")
+
+newTrainValidNames =  c("0 Doppel", "1 Doppel\n (Only In\n Unbalanced)","1 Doppel\n (Only In\n Balanced)", "2 Doppel","3 Doppel","4 Doppel", "5 Doppel", "Neg Con", "5 Pos Con")
+
+all_plot2 = visualiseVerificationResults(veri_results_all,
+                originalTrainValidNames,
+                newTrainValidNames)
+all_plot2 = ggpar(all_plot2, title="Validation Accuracy of KNN Models (ALL)") +
+  font("title", size = 18, color = "black", face = "bold") +
+  font("xlab", size = 14, color = "black") +
+  font("xylab", size = 14, color = "black") +
+  font("xy.text", size = 11, color = "black") +
+  font("legend.title", size = 14, color = "black") +
+  font("legend.text", size = 11, color = "black")
+all_plot2
+ggsave(filename = file.path(images_dir, "all_veri.tiff"), width = 11, height = 5, device='tiff')
+```
+
