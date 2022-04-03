@@ -1,0 +1,129 @@
+---
+title: "R Notebook"
+output: Arrange Plots for Use In the Paper
+---
+
+# DD Identification
+
+```{r fig.height=12, fig.width=10}
+if (!"ggpubr" %in% installed.packages()){
+  install.packages("ggpubr")
+}
+library(ggpubr)
+
+display_doppel = list(
+  "DMD"=list(
+    "Unbalanced"=doppel_hp_removed,
+    "Balanced"=doppel_hp_over_rem
+  ),
+  "Leukaemia"=list(
+    "Unbalanced"=doppel_ag,
+    "Balanced"=doppel_ag_over
+  ),
+  "ALL"=list(
+    "Unbalanced"=doppel_ry,
+    "Balanced"=doppel_ry_over
+  )
+)
+
+limits = list(
+  "DMD"=c(0.75, 1),
+  "Leukaemia"=c(0.6, 1),
+  "ALL"=c(0.75, 1)
+)
+
+labels = list(
+  "DMD"=c('A', 'B'),
+  "Leukaemia"=c('C', 'D'),
+  "ALL"=c('E', 'F')
+)
+
+dataset_subplots = lapply(
+  names(display_doppel),
+  function(dataset_name){
+      row_plot_list = lapply(
+      names(display_doppel[[dataset_name]]),
+      function(doppel_result_name){
+        current_plot = ggpar(
+          visualisePPCCDoppelgangers(
+            display_doppel[[dataset_name]][[doppel_result_name]]) +
+          coord_cartesian(ylim = limits[[dataset_name]]), 
+          title=doppel_result_name
+        )
+        if (dataset_name != "ALL"){
+          current_plot = current_plot + rremove("legend")
+        }
+        if (doppel_result_name == "Balanced"){
+          current_plot = current_plot +
+            rremove("ylab") +
+            rremove("y.ticks")+
+            rremove("y.text")
+        }
+        return(current_plot)
+      }
+    )
+    tmp_subplot = ggarrange(
+      plotlist = row_plot_list,
+      labels = labels[[dataset_name]],
+      align='h',
+      ncol = 2, 
+      nrow = 1
+    ) 
+    
+    if (dataset_name == "ALL"){
+      tmp_subplot = ggarrange(
+      plotlist = row_plot_list,
+      labels = labels[[dataset_name]],
+      align='h',
+      common.legend = T,
+      legend = "bottom",
+      ncol = 2, 
+      nrow = 1
+    ) 
+    }
+    
+    tmp_subplot = annotate_figure(
+      tmp_subplot,
+      top = text_grob(
+        dataset_name,
+        color = "black",
+        face = "bold",
+        size = 16
+      )
+    ) 
+    return(tmp_subplot)
+  }
+)
+# Arrange both plots
+microarray_ddi_plots = ggarrange(
+  plotlist = dataset_subplots,
+  align='v',
+  nrow=3,
+  ncol=1
+)
+# Add big title above
+microarray_ddi_plots = annotate_figure(
+  microarray_ddi_plots,
+  top = text_grob(
+    "PPCC DD Identification",
+    color = "black",
+    face = "bold",
+    size = 18
+  )
+)
+microarray_ddi_plots
+```
+
+```{r}
+# Output
+ggsave(filename = file.path(images_dir, "microarray_ddi.tiff"), width = 10, height = 12, device='tiff')
+```
+
+
+
+## DD Verification
+
+```{r}
+
+```
+
