@@ -15,14 +15,15 @@ File paths
 ``` r
 data_dir = "../data"
 cleaned_data_dir = "../cleaned_data"
-functions_dir = "../functions"
 images_dir = "../images"
-output_dir = "../output"
+planning_data_dir = "../planning_data"
+experiment_plans_dir = "../experiment_plans"
 ```
 
 Load functions for pre-processing and analysis:
 
 ``` r
+functions_dir = "../functions"
 source(file.path(functions_dir,"preprocessing_functions.R"))
 source(file.path(functions_dir,"analysis_functions.R"))
 ```
@@ -124,7 +125,7 @@ writeData(wb, 4, getDoppelnNonDoppelSamples(
   doppel_result = doppel_hp_no_combat,
   metadata = dmd_meta,
   batchname = "P"))
-saveWorkbook(wb, file = file.path(output_dir, "dmd_no_combat_planning.xlsx"), overwrite = TRUE)
+saveWorkbook(wb, file = file.path(planning_data_dir, "dmd_no_combat_planning.xlsx"), overwrite = TRUE)
 ```
 
 ## 4\) Testing the Doppelganger Effect
@@ -137,7 +138,7 @@ correction prior to model training and validation. **
 
 ``` r
 veri_results_dmd_no_combat =  verifyDoppelgangers(
-  file.path(cleaned_data_dir, "dmd_no_combat_experiment_plan.csv"),
+  file.path(experiment_plans_dir, "dmd_no_combat_experiment_plan.csv"),
   dmd,
   dmd_meta,
   do_batch_corr = TRUE,
@@ -191,7 +192,7 @@ correction is done prior to model training and validation. **
 
 ``` r
 veri_results_dmd_no_combat =  verifyDoppelgangers(
- file.path(cleaned_data_dir, "dmd_no_combat_experiment_plan.csv"),
+ file.path(experiment_plans_dir, "dmd_no_combat_experiment_plan.csv"),
   dmd,
   dmd_meta,
   do_batch_corr = FALSE,
@@ -233,7 +234,7 @@ correction**
 
 ``` r
 veri_results_dmd_no_combat =  verifyDoppelgangers(
-  file.path(cleaned_data_dir, "dmd_experiment_plan.csv"),
+  file.path(experiment_plans_dir, "dmd_experiment_plan.csv"),
   dmd,
   dmd_meta,
   do_batch_corr = FALSE,

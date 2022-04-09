@@ -1,0 +1,452 @@
+---
+title: "Exploring Doppelgangers in the CCLE Dataset"
+output: rmarkdown::github_document
+author: "Wang Li Rong"
+---
+
+# 0. Importing Libraries and Useful Functions
+
+## a) Importing libraries
+
+```{r}
+if (!("doppelgangerIdentifier" %in% installed.packages())){
+  install.packages('devtools')
+  library(devtools)
+  install_github('lr98769/doppelgangerIdentifier')
+}
+library("doppelgangerIdentifier")
+```
+
+## b) Importing Functions
+
+```{r}
+functions_dir = "../functions"
+source(file.path(functions_dir, "process_dataframes.R"))
+source(file.path(functions_dir, "process_vectors.R"))
+source(file.path(functions_dir, "process_lists.R"))
+source(file.path(functions_dir, "output_functions.R"))
+source(file.path(functions_dir, "planning_functions.R"))
+```
+
+## c) File Paths
+
+```{r}
+dataset_url = "https://depmap.org/portal/download/api/download?file_name=ccle%2Fccle_2019%2FCCLE_RNAseq_rsem_genes_tpm_20180929.txt.gz&bucket=depmap-external-downloads"
+
+dataset_dir = "../data"
+processed_dataset_dir = "../cleaned_data"
+planning_data_dir = "../planning_data"
+experiment_plans_dir = "../experiment_plans"
+images_dir = "../images"
+
+dataset_filepath = file.path(dataset_dir, "CCLE_RNAseq_rsem_genes_tpm_20180929.txt.gz")
+
+processed_ccle_filepath = file.path(processed_dataset_dir, 
+                                    "ccle.rds")
+processed_ccle_meta_filepath = file.path(processed_dataset_dir, 
+                                    "ccle_meta.rds")
+
+processed_lymph_lung_filepath = file.path(processed_dataset_dir,
+                                          "lymph_lung.rds")
+processed_lymph_lung_meta_filepath = file.path(processed_dataset_dir,
+                                          "lymph_lung_meta.rds")
+planning_data_lymph_lung_filepath = file.path(planning_data_dir,
+                                              "lymph_lung_plan.xlsx")
+ex_plan_lymph_lung_xlsx_filepath = file.path(experiment_plans_dir,
+                                        "lymph_lung_ex_plan.xlsx")
+ex_plan_lymph_lung_csv_filepath = file.path(experiment_plans_dir,
+                                        "lymph_lung_ex_plan.csv")
+
+processed_large_upper_filepath = file.path(processed_dataset_dir,
+                                          "large_upper.rds")
+processed_large_upper_meta_filepath = file.path(processed_dataset_dir,
+                                          "large_upper_meta.rds")
+planning_data_large_upper_filepath = file.path(planning_data_dir,
+                                              "large_upper_plan.xlsx")
+ex_plan_large_upper_xlsx_filepath = file.path(experiment_plans_dir,
+                                        "large_upper_ex_plan.xlsx")
+ex_plan_large_upper_csv_filepath = file.path(experiment_plans_dir,
+                                        "large_upper_ex_plan.csv")
+
+ddi_image_filepath= file.path(images_dir, "ccle_ddi.tiff")
+dv_image_filepath= file.path(images_dir, "ccle_dv.tiff")
+
+```
+
+# d) Ensure directories and the proper files have been downloaded
+```{r}
+directories = c(
+  dataset_dir, processed_dataset_dir, planning_data_dir, 
+  experiment_plans_dir, images_dir
+)
+for (directory in directories){
+  if (!file.exists(directory)){
+    dir.create(directory)
+  }
+}
+if (!file.exists(dataset_filepath)){
+  download.file(dataset_url, dataset_filepath, mode = "wb")
+}
+
+```
+# 1. Importing the Dataset
+
+Data Set Statistics:
+- 57820 Genes
+- 1019 Samples
+
+```{r}
+if (!file.exists(processed_ccle_filepath)){
+  ccle = read.table(dataset_filepath, row.names = 1)
+  ccle = set_first_row_as_header(ccle)
+  ccle$transcript_ids = NULL
+  ccle[] = lapply(ccle,as.numeric)
+  saveRDS(ccle, processed_ccle_filepath)
+} else {
+  ccle = readRDS(processed_ccle_filepath)
+}
+```
+
+Getting meta data for CCLE
+
+```{r}
+if (!file.exists(processed_ccle_meta_filepath)){
+  ccle_meta = generate_meta_data(ccle)
+  saveRDS(ccle_meta, processed_ccle_meta_filepath)
+} else {
+  ccle_meta = readRDS(processed_ccle_meta_filepath)
+}
+```
+
+Analysing classes in CCLE
+
+```{r}
+View(table(ccle_meta$Class))
+```
+
+# 2. Finding PPCC Doppelgangers Within CCLE
+
+We chose 2 sets of cancer pairs to look for doppelgangers. 
+
+## a) "Haematopoietic and Lymphoid Tissue" and "Lung" Cancer
+
+This cancer pair was chosen for its large size.
+
+There are 173 HAEMATOPOIETIC_AND_LYMPHOID_TISSUE samples and 188 LUNG samples.
+
+```{r}
+if (!file.exists(processed_lymph_lung_meta_filepath)){
+  lymph_lung_meta = ccle_meta[ccle_meta$Class %in% c("HAEMATOPOIETIC_AND_LYMPHOID_TISSUE","LUNG"),]
+  saveRDS(lymph_lung_meta, processed_lymph_lung_meta_filepath)
+} else {
+  lymph_lung_meta = readRDS(processed_lymph_lung_meta_filepath)
+}
+
+if (!file.exists(processed_lymph_lung_filepath)){
+  lymph_lung = ccle[, row.names(lymph_lung_meta)]
+  saveRDS(lymph_lung, processed_lymph_lung_filepath)
+} else {
+  lymph_lung = readRDS(processed_lymph_lung_filepath)
+}
+table(lymph_lung_meta$Class)
+```
+Let's observe if there are any doppelgangers within this data.
+
+```{r}
+start_time = Sys.time()
+lymph_lung_doppel = getPPCCDoppelgangers(
+  raw_data = lymph_lung,
+  meta_data = lymph_lung_meta,
+  do_batch_corr = FALSE
+)
+end_time = Sys.time()
+end_time - start_time
+```
+
+```{r fig.width=10, fig.height=8}
+visualisePPCCDoppelgangers(lymph_lung_doppel) + ggtitle(label="PPCC Doppelganger Identification", subtitle="HAEMATOPOIETIC_AND_LYMPHOID_TISSUE + LUNG") + theme(plot.subtitle = element_text(hjust = 0.5))
+```
+
+```{r}
+# There are 17 Doppelgangers
+table(lymph_lung_doppel$PPCC_df$DoppelgangerLabel)
+```
+
+```{r}
+lymph_lung_doppel$PPCC_df[lymph_lung_doppel$PPCC_df$DoppelgangerLabel == "Doppelganger",]
+```
+
+## b) "Large Intestine" and "Upper Aerodigestive Tract" Cancer
+
+ There are 56 LARGE_INTESTINE samples and 31 UPPER_AERODIGESTIVE_TRACT  samples.
+
+```{r}
+if (!file.exists(processed_large_upper_meta_filepath)){
+  large_upper_meta = ccle_meta[ccle_meta$Class %in% c("LARGE_INTESTINE","UPPER_AERODIGESTIVE_TRACT"),]
+  saveRDS(large_upper_meta, processed_large_upper_meta_filepath)
+} else {
+  large_upper_meta = readRDS(processed_large_upper_meta_filepath)
+}
+
+if (!file.exists(processed_large_upper_filepath)){
+  large_upper = ccle[, row.names(large_upper_meta)]
+  saveRDS(large_upper, processed_large_upper_filepath)
+} else {
+  large_upper = readRDS(processed_large_upper_filepath)
+}
+table(large_upper_meta$Class)
+```
+
+Let's observe if there are any doppelgangers within this data.
+
+```{r}
+start_time = Sys.time()
+large_upper_doppel = getPPCCDoppelgangers(
+  raw_data = large_upper,
+  meta_data = large_upper_meta,
+  do_batch_corr = FALSE
+)
+end_time = Sys.time()
+end_time - start_time
+```
+```{r fig.width=10, fig.height=8}
+visualisePPCCDoppelgangers(large_upper_doppel) + ggtitle(label="PPCC Doppelganger Identification", subtitle="LARGE_INTESTINE + UPPER_AERODIGESTIVE_TRACT") + theme(plot.subtitle = element_text(hjust = 0.5))
+```
+
+```{r}
+large_upper_doppel$PPCC_df[large_upper_doppel$PPCC_df$DoppelgangerLabel == "Doppelganger",]
+```
+
+# 3. Verifying the functionality of identified doppelgangers
+
+## a) "Haematopoietic and Lymphoid Tissue" and "Lung" Cancer
+
+Generating csv file with necessary data for experiment planning
+
+```{r}
+lymph_lung_planning_list = generate_planning_dataframes(
+  meta_data_df = lymph_lung_meta,
+  doppel_results = lymph_lung_doppel)
+output_list_of_df_to_excel(
+  list_to_save=lymph_lung_planning_list,
+  filename = planning_data_lymph_lung_filepath
+)
+```
+
+Generating list of doppelganger validation samples
+
+```{r}
+lymph_lung_doppel_sample_in_valid = find_largest_valid_doppel(
+  planning_list = lymph_lung_planning_list)
+
+lymph_lung_doppel_sample_in_valid
+```
+
+Highlighting doppelganger validation samples in the excel file for a visual check
+
+```{r}
+output_highlighted_planning_file(
+  planning_list = lymph_lung_planning_list,
+  highlighted_filename = planning_data_lymph_lung_filepath,
+  doppel_samples_in_valid = lymph_lung_doppel_sample_in_valid
+)
+```
+
+Generate experiment plan
+
+```{r}
+lymph_lung_experiment_plan = generate_experiment_plan(
+  planning_list = lymph_lung_planning_list,
+  valid_doppel = lymph_lung_doppel_sample_in_valid,
+  num_samples_added = 4)
+```
+Output the experiment plan to an excel file (For a visual check)
+
+```{r}
+highlight_style_list = list(
+  train_doppel = createStyle(fgFill = "#d0adff"),
+  train_non_doppel = createStyle(fgFill = "#ffffff"),
+  valid_doppel = createStyle(fgFill = "#8d29ff"),
+  valid_non_doppel = createStyle(fgFill = "#bdbdbd"),
+  valid_non_doppel_extra = createStyle(fgFill = "#ffffff")
+)
+
+output_experiment_plan(
+  experiment_plan = lymph_lung_experiment_plan,
+  planning_list = lymph_lung_planning_list,
+  ex_plan_csv_fp = ex_plan_lymph_lung_csv_filepath,
+  ex_plan_xlsx_fp = ex_plan_lymph_lung_xlsx_filepath,
+  highlight_style_list = highlight_style_list)
+```
+Verifying the functionality of PPCC data doppelgangers
+
+```{r}
+lymph_lung_veri = verifyDoppelgangers(
+  experiment_plan_filename = ex_plan_lymph_lung_csv_filepath,
+  raw_data = lymph_lung,
+  meta_data = lymph_lung_meta,
+  feature_set_portion = 0.1,
+  do_batch_corr = FALSE,
+  k=19,
+  size_of_val_set = 20
+)
+```
+
+Visualise the results
+
+```{r fig.width=10, fig.height=5}
+visualiseVerificationResults(lymph_lung_veri) + ggtitle(label="Accuracy of KNN Models", subtitle="HAEMATOPOIETIC_AND_LYMPHOID_TISSUE + LUNG\nValidation Set Size = 20 Samples") + theme(plot.subtitle = element_text(hjust = 0.5))
+```
+
+## b) "Large Intestine" and "Upper Aerodigestive Tract" Cancer
+
+Generating csv file with necessary data for experiment planning
+
+```{r}
+large_upper_planning_list = generate_planning_dataframes(
+  meta_data_df = large_upper_meta,
+  doppel_results = large_upper_doppel)
+```
+
+Get largest possible set of doppelganger samples in validation
+
+```{r}
+large_upper_valid_doppel = find_largest_valid_doppel(
+  planning_list = large_upper_planning_list
+)
+large_upper_valid_doppel
+```
+
+Get experiment plan with this list of doppelganger samples in validation
+
+```{r}
+large_upper_experiment_plan = generate_experiment_plan(
+  planning_list = large_upper_planning_list,
+  valid_doppel = large_upper_valid_doppel,
+  num_samples_added = 1
+)
+```
+
+Save experiment plans
+
+```{r}
+output_experiment_plan(
+  experiment_plan = large_upper_experiment_plan,
+  planning_list = large_upper_planning_list,
+  ex_plan_csv_fp = ex_plan_large_upper_csv_filepath,
+  ex_plan_xlsx_fp = ex_plan_large_upper_xlsx_filepath,
+  highlight_style_list = highlight_style_list
+)
+```
+Verify functionality of PPCC data doppelgangers
+
+```{r}
+large_upper_veri = verifyDoppelgangers(
+  experiment_plan_filename = ex_plan_large_upper_csv_filepath,
+  raw_data = large_upper,
+  meta_data = large_upper_meta,
+  feature_set_portion = 0.1,
+  do_batch_corr = FALSE,
+  k=9,
+  size_of_val_set = 4
+)
+```
+
+View verification results
+
+```{r fig.width=10, fig.height=5}
+visualiseVerificationResults(large_upper_veri) + ggtitle(label="Accuracy of KNN Models", subtitle="LARGE_INTESTINE + UPPER_AERODIGESTIVE_TRACT\nValidation Set Size = 4 Samples") + theme(plot.subtitle = element_text(hjust = 0.5))
+```
+
+# 4. Arrange Plots
+
+## a) DD Identification
+
+```{r fig.height=6, fig.width=8}
+if (!"ggpubr" %in% installed.packages()){
+  install.packages("ggpubr")
+}
+library(ggpubr)
+
+# Arrange both plots
+ccle_ddi_plots = ggarrange(
+          ggpar(visualisePPCCDoppelgangers(lymph_lung_doppel) +
+            coord_cartesian(ylim = c(0, 1)),
+            title="lymph_lung"),
+          ggpar(visualisePPCCDoppelgangers(large_upper_doppel) +
+            coord_cartesian(ylim = c(0, 1)),
+            title="large_upper")+
+          rremove("ylab") +
+          rremove("y.ticks")+
+          rremove("y.text"),
+          align='h',
+          labels=c('A', 'B'),
+          common.legend = T,
+          legend = "bottom"
+          )
+# Add big title above
+ccle_ddi_plots = annotate_figure(
+  ccle_ddi_plots,
+  top = text_grob("PPCC DD Identification",
+  color = "black",
+  face = "bold",
+  size = 18))
+ccle_ddi_plots
+```
+
+```{r}
+# Output
+ggsave(filename = ddi_image_filepath, width = 8, height = 6, device='tiff')
+```
+
+## b) DD Verification
+
+```{r fig.width=8, fig.height=7}
+if (!"ggpubr" %in% installed.packages()){
+  install.packages("ggpubr")
+}
+library(ggpubr)
+
+# Arrange both plots
+ccle_dv_plots = ggarrange(
+  ggpar(visualiseVerificationResults(lymph_lung_veri,
+    c("Doppel_0","Doppel_4", "Doppel_8", "Doppel_12", "Doppel_14", "Pos_Con_14", "Neg_Con"),
+    c("0 Doppel", "4 Doppel", "8 Doppel", "12 Doppel", "14 Doppel", "14 Pos Con", "Neg Con")) +
+    coord_cartesian(ylim = c(0, 1)),
+    title="lymph_lung") +
+    scale_y_continuous(breaks=seq(0,1,0.2)) +
+    labs(subtitle="341 Training, 20 Validation") + 
+      theme(plot.subtitle=element_text(size=11, hjust=0.5, color="#2e2e2e")) + 
+      theme(plot.title=element_text(size=12, hjust=0.5, color="black", face="bold")),
+  ggpar(visualiseVerificationResults(large_upper_veri,
+    c("Doppel_0","Doppel_1", "Doppel_2", "Doppel_3", "Doppel_4", "Pos_Con_4", "Neg_Con"),
+    c("0 Doppel", "1 Doppel", "2 Doppel", "3 Doppel", "4 Doppel", "4 Pos Con", "Neg Con")
+    ) +
+    coord_cartesian(ylim = c(0, 1.1)),
+    title="large_upper") +
+    scale_y_continuous(breaks=seq(0,1,0.2)) +
+    labs(subtitle="83 Training, 4 Validation") + 
+      theme(plot.subtitle=element_text(size=11, hjust=0.5, color="#2e2e2e")) + 
+      theme(plot.title=element_text(size=12, hjust=0.5, color="black", face="bold")),
+  align='v',
+  labels=c('A', 'B'),
+  common.legend = T,
+  legend = "bottom",
+  nrow=2
+)
+# Add big title above
+ccle_dv_plots = annotate_figure(
+  ccle_dv_plots,
+  top = text_grob("Functional Doppelganger Verification",
+  color = "black",
+  face = "bold",
+  size = 18))
+ccle_dv_plots
+
+```
+
+```{r}
+# Output
+ggsave(filename = dv_image_filepath, width = 8, height = 7, device='tiff')
+```
+

@@ -1,5 +1,6 @@
 The Doppelganger Effect in Gene Expression Data sets
 ================
+Wang Li Rong
 
 # 1\. Exploring the (Duchenne Muscular Dystrophy) DMD Datasets
 
@@ -10,14 +11,15 @@ File paths
 ``` r
 data_dir = "../data"
 cleaned_data_dir = "../cleaned_data"
-functions_dir = "../functions"
 images_dir = "../images"
-output_dir = "../output"
+planning_data_dir = "../planning_data"
+experiment_plans_dir = "../experiment_plans"
 ```
 
 Load functions for pre-processing and analysis:
 
 ``` r
+functions_dir = "../functions"
 source(file.path(functions_dir,"preprocessing_functions.R"))
 source(file.path(functions_dir,"analysis_functions.R"))
 ```
@@ -29,7 +31,7 @@ HaslettData - 12 DMD Samples - 12 Normal Samples
 ``` r
 # Converts the affy probes to ensemble id
 dmd_h = getDataFile(
-  filename= file.path(data_dir, "data/DMD-HaslettData.csv"),
+  filename= file.path(data_dir, "DMD-HaslettData.csv"),
   affy_attribute = "affy_hg_u95av2",
   batch_name = "H")
 #Forming The metadata dataframe 
@@ -463,14 +465,14 @@ writeData(wb, 5, getDoppelnNonDoppelSamples(
   doppel_result = doppel_hp_over,
   metadata = dmd_meta,
   batchname = "P"))
-saveWorkbook(wb, file = "output/dmd_planning.xlsx", overwrite = TRUE)
+saveWorkbook(wb, file = file.path(planning_data_dir, "dmd_planning.xlsx"), overwrite = TRUE)
 ```
 
 ## 4\) Testing the Doppelganger Effect
 
 ``` r
 veri_results_dmd =  verifyDoppelgangers(
-  file.path(cleaned_data_dir,"dmd_experiment_plan.csv"),
+  file.path(experiment_plans_dir,"dmd_experiment_plan.csv"),
   doppel_hp_over$Batch_corrected,
   dmd_meta,
   do_batch_corr = FALSE,

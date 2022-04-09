@@ -1,5 +1,6 @@
 The Doppelganger Effect in Biomedical Data sets
 ================
+Wang Li Rong
 
 # 2\. Exploring the Leukemia Datasets
 
@@ -10,14 +11,15 @@ File paths
 ``` r
 data_dir = "../data"
 cleaned_data_dir = "../cleaned_data"
-functions_dir = "../functions"
 images_dir = "../images"
-output_dir = "../output"
+planning_data_dir = "../planning_data"
+experiment_plans_dir = "../experiment_plans"
 ```
 
 Load functions for pre-processing and analysis:
 
 ``` r
+functions_dir = "../functions"
 source(file.path(functions_dir,"preprocessing_functions.R"))
 source(file.path(functions_dir,"analysis_functions.R"))
 ```
@@ -428,14 +430,14 @@ writeData(wb, 5, getDoppelnNonDoppelSamples(
   doppel_result = doppel_ag_over,
   metadata = leuk_meta,
   batchname = "G"))
-saveWorkbook(wb, file = "output/leuk_planning.xlsx", overwrite = TRUE)
+saveWorkbook(wb, file = file.path(planning_data_dir, "leuk_planning.xlsx"), overwrite = TRUE)
 ```
 
 ## 4\) Testing for doppelganger effect
 
 ``` r
 veri_results_leuk = verifyDoppelgangers(
-      file.path(cleaned_data_dir, "leuk_experiment_plan.csv"),
+      file.path(experiment_plans_dir, "leuk_experiment_plan.csv"),
       doppel_ag_over$Batch_corrected,
       leuk_meta,
       do_batch_corr = FALSE,
@@ -469,7 +471,7 @@ The importance of balanced batches for verification step
 
 ``` r
 veri_results_leuk_extra = verifyDoppelgangers(
-     file.path(cleaned_data_dir, "leuk_experiment_plan.csv"),
+     file.path(experiment_plans_dir, "leuk_experiment_plan.csv"),
       leuk,
       leuk_meta,
       k=7,

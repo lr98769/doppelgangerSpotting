@@ -1,5 +1,6 @@
 The Doppelganger Effect in Biomedical Data sets
 ================
+Wang Li Rong
 
 # 3\. Exploring the ALL (Acute Lymphocytic Leukemia) Datasets
 
@@ -10,14 +11,15 @@ File paths
 ``` r
 data_dir = "../data"
 cleaned_data_dir = "../cleaned_data"
-functions_dir = "../functions"
 images_dir = "../images"
-output_dir = "../output"
+planning_data_dir = "../planning_data"
+experiment_plans_dir = "../experiment_plans"
 ```
 
 Load functions for pre-processing and analysis:
 
 ``` r
+functions_dir = "../functions"
 source(file.path(functions_dir,"preprocessing_functions.R"))
 source(file.path(functions_dir,"analysis_functions.R"))
 ```
@@ -401,14 +403,14 @@ writeData(wb, 6, getDoppelnNonDoppelSamples(
   doppel_result = doppel_ry_over,
   metadata = all_meta,
   batchname = "Y"))
-saveWorkbook(wb, file = "output/all_planning.xlsx", overwrite = TRUE)
+saveWorkbook(wb, file = file.path(planning_data_dir, "all_planning.xlsx"), overwrite = TRUE)
 ```
 
 ## 4\) Testing the doppelganger effect of identified doppelgangers
 
 ``` r
 veri_results_all = verifyDoppelgangers(
-  file.path(cleaned_data_dir, "all_experiment_plan.csv"),
+  file.path(experiment_plans_dir, "all_experiment_plan.csv"),
   doppel_ry_over$Batch_corrected,
   all_meta,
   do_batch_corr = FALSE,
@@ -440,7 +442,7 @@ What happens if we do not verify using batch balanced data.
 
 ``` r
 veri_results_all_extra = verifyDoppelgangers(
-  file.path(cleaned_data_dir, "all_experiment_plan.csv"),
+  file.path(experiment_plans_dir, "all_experiment_plan.csv"),
   all,
   all_meta,
   size_of_val_set = 10)
