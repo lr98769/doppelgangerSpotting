@@ -17,5 +17,5 @@ is_balanced <- function(sample_vec, meta_data_df){
   class_vec = meta_data_df[sample_vec, "Class"]
   class_table = table(class_vec)
   max_length = max(as.numeric(class_table))
-  return(all(class_table==max_length))
+  return(all(class_table==max_length) & (length(class_table)==2))
 }

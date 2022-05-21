@@ -40,6 +40,14 @@ generate_planning_dataframes <- function(meta_data_df,
   rearranged_doppel_df = convert_list_to_df(rearranged_doppel)
   colnames(rearranged_doppel_df) = rep("DoppelPartner", ncol(rearranged_doppel_df))
   
+  # Reorder the rows according to number of doppel partners
+  rearranged_doppel_df$num_doppel_partners = apply(rearranged_doppel_df, 1, function(row){
+    return(sum(!is.na(row)))
+  })
+  rearranged_doppel_df = rearranged_doppel_df[order(rearranged_doppel_df$num_doppel_partners, 
+                                                    decreasing = TRUE), ]
+  rearranged_doppel_df$num_doppel_partners = NULL
+  
   # Output relevant data frames
   return_list[["meta_data"]] = meta_data_df
   return_list[["doppel_mapping"]] = rearranged_doppel_df
@@ -117,8 +125,10 @@ create_class_list <- function(sample_vec, meta_data_df){
       meta_data_df[(meta_data_df$Class == class),]
     )
   }
+  
   return(class_list)
 }
+
 
 # Find samples of the same class to replace doppel samples
 find_valid_non_doppel <- function(all_non_doppel,
@@ -135,16 +145,24 @@ find_valid_non_doppel <- function(all_non_doppel,
     meta_data_df = meta_data_df
   )
   
-  # Iterate through all vaid doppel classes
+  class_counters = list()
+  
+  #Iterate through all valid doppel classes
   for (class in valid_doppel_class){
+    if (!(class %in% names(class_counters))){
+      class_counters[[class]] = 1
+    }
+    if (class_counters[[class]] > length(non_doppel_class_list[[class]])){
+      print("Exceeded number of samples")
+      next
+    }
     # Add the first non doppel sample of this class
     valid_non_doppel = append(
-      valid_non_doppel, 
-      non_doppel_class_list[[class]][1]
-      )
-    # Remove this sample (since it is already used)
-    non_doppel_class_list[[class]] = non_doppel_class_list[[class]][
-      2:length(non_doppel_class_list[[class]])]
+      valid_non_doppel,
+      non_doppel_class_list[[class]][class_counters[[class]]]
+    )
+    # Increment counter
+    class_counters[[class]] = class_counters[[class]] + 1
   }
   
   return (valid_non_doppel)
@@ -181,9 +199,15 @@ find_valid_non_doppel_extra <- function(all_non_doppel,
     major_class_size = max(valid_classes)
     
     # 3f) Get minor class in validation
-    minor_class_size = min(valid_classes)
-    minor_class = names(valid_classes[valid_classes == minor_class_size])
-    
+    if (length(valid_classes) == 2){
+      minor_class_size = min(valid_classes)
+      minor_class = names(valid_classes[valid_classes == minor_class_size])
+    } else{
+      minor_class_size = 0
+      major_class = names(valid_classes)
+      minor_class = setdiff(unique(meta_data_df$Class), major_class)
+    }
+
     # 3g) Add in extra samples to balance classes in validation
     num_extra_samples = major_class_size - minor_class_size
     valid_non_doppel_extra = non_doppel_class_list[[minor_class]][
@@ -320,8 +344,8 @@ get_class_distribution <- function(vec, meta_data_df, class_order){
 }
 
 get_num_doppel_pairs <- function(doppel_mapping_df,
-                                train,
-                                valid){
+                                 train,
+                                 valid){
   total_num_doppel_pairs = 0
   doppel_mapping = convert_df_to_list(doppel_mapping_df)
   for (sample in valid){
@@ -330,6 +354,21 @@ get_num_doppel_pairs <- function(doppel_mapping_df,
     total_num_doppel_pairs = total_num_doppel_pairs + num_doppel_pairs
   }
   return(total_num_doppel_pairs)
+}
+
+get_num_val_doppel_samples <- function(doppel_mapping_df,
+                                       train,
+                                       valid){
+  num_val_doppel_samples = 0
+  doppel_mapping = convert_df_to_list(doppel_mapping_df)
+  for (sample in valid){
+    doppel_partners = doppel_mapping[[sample]]
+    num_doppel_pairs = length(intersect(doppel_partners, train))
+    if (num_doppel_pairs > 0){
+      num_val_doppel_samples = num_val_doppel_samples + 1
+    }
+  }
+  return(num_val_doppel_samples)
 }
 
 # Adds in training and validation stats 
@@ -344,7 +383,7 @@ add_train_valid_stats <- function(experiment_plan,
   classes = classes[order(classes)]
   
   # Instantiate stats df
-  stats_df = data.frame(matrix(ncol = 5, nrow = 0))
+  stats_df = data.frame(matrix(ncol = 6, nrow = 0))
   stats_colnames = c()
   for (class in classes){
     stats_colnames = append(stats_colnames, paste("train", class, sep="_"))
@@ -352,6 +391,7 @@ add_train_valid_stats <- function(experiment_plan,
   }
   stats_colnames = stats_colnames[order(stats_colnames)]
   stats_colnames = append(stats_colnames, "num_doppel_pairs")
+  stats_colnames = append(stats_colnames, "num_val_doppel_samples")
   colnames(stats_df) = stats_colnames
   
   for (train_valid in train_valid_sets){
@@ -373,7 +413,13 @@ add_train_valid_stats <- function(experiment_plan,
       experiment_plan[["train_valid_sets"]][[train_valid]][["valid"]]
     )
     
-    return_row = c(return_row, train_dist, valid_dist, num_doppel_pairs)
+    num_val_doppel_sample = get_num_val_doppel_samples(
+      doppel_mapping_df,
+      experiment_plan[["train_valid_sets"]][[train_valid]][["train"]],
+      experiment_plan[["train_valid_sets"]][[train_valid]][["valid"]]
+    )
+    
+    return_row = c(return_row, train_dist, valid_dist, num_doppel_pairs, num_val_doppel_sample)
     stats_df[train_valid, ] = return_row
     
   }
@@ -483,5 +529,3 @@ generate_experiment_plan <- function(planning_list,
   print("Experiment plan generated!")
   return(experiment_plan)
 }
-
-

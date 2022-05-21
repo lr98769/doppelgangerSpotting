@@ -1,0 +1,338 @@
+---
+title: "Additional Code"
+output: html_notebook
+---
+
+
+# For experiment plan generation
+
+Find validation doppelganger samples
+
+```{r}
+get_val_train_doppel_samples <- function(desired_class_dist,
+                                        planning_list,
+                                        sampling_seed=2022){
+  
+  meta_data_df = planning_list$meta_data
+  doppel_mapping = planning_list$doppel_mapping
+  
+  val_doppel = c()
+  train_doppel = c()
+  
+  doppel_samples = rownames(doppel_mapping)
+  
+  # For each class
+  for (class in names(desired_class_dist)){
+    print(paste("Current class:", class))
+    desired_number_of_class_samples = desired_class_dist[[class]]
+    print(paste("- Desired number of class samples:", desired_number_of_class_samples))
+    # Get doppelganger samples with this class
+    class_samples = rownames(
+      meta_data_df[meta_data_df$Class == class, ])
+    doppel_class_samples = intersect(doppel_samples, class_samples)
+    
+    class_val_doppel = c()
+    
+    # Go through doppel_class_samples and keep adding train_doppel until desired number of samples in val is reached
+    for (doppel_class_sample in doppel_class_samples){
+      # add this sample to train_doppel
+      train_doppel = c(train_doppel, doppel_class_sample)
+      # add all its doppel partners to valid
+      doppel_partners = doppel_mapping[doppel_class_sample, ]
+      doppel_partners = doppel_partners[!is.na(doppel_partners)]
+      class_val_doppel = c(class_val_doppel, doppel_partners)
+      if (
+length(class_val_doppel) >= desired_number_of_class_samples){
+        break
+      }
+    }
+    
+    # Get desired number of valid class samples 
+    set.seed(sampling_seed)
+    class_val_doppel = sample(class_val_doppel, desired_number_of_class_samples)
+    
+    # Add these valid class samples to val_doppel
+    val_doppel = c(val_doppel, class_val_doppel)
+  }
+  
+  return_list = list()
+  return_list$val_doppel = val_doppel
+  return_list$train_doppel = train_doppel
+  
+  return(return_list)
+}
+desired_class_dist = list(
+  "HAEMATOPOIETIC_AND_LYMPHOID_TISSUE" = 25,
+  "LUNG" = 25
+)
+lymph_lung_val_train_doppels = get_val_train_doppel_samples(
+  desired_class_dist=desired_class_dist,
+  planning_list=lymph_lung_planning_list
+)
+```
+
+```{r}
+
+group_samples_by_class <- function(samples, meta_data_df){
+  meta_data_df = data.frame(meta_data_df)
+  meta_data_df = meta_data_df[samples, ]
+  classes = unique(meta_data_df$Class)
+  return_list = list()
+  for (class in classes){
+    return_list[[class]] = rownames(meta_data_df[meta_data_df$Class == class,])
+  }
+  return(return_list)
+}
+
+# Get non doppel samples
+# train_non_doppel = Samples that always remain in the training set
+# val_non_doppel = Samples that may be moved to the validation set
+
+get_val_train_non_doppel_samples <- function(val_train_doppels, 
+                                             planning_list,
+                                             sampling_seed=2022){
+  
+  meta_data_df = planning_list$meta_data
+  doppel_mapping = planning_list$doppel_mapping 
+  
+  # Get non doppel samples
+  all_samples = rownames(meta_data_df)
+  doppel_samples = rownames(doppel_mapping)
+  non_doppel_samples = setdiff(all_samples, doppel_samples)
+  
+  # Group non doppel samples according to their class
+  grouped_non_doppel = group_samples_by_class(
+    meta_data_df = meta_data_df,
+    samples = non_doppel_samples
+  )
+  
+  # Group val doppel samples according to their class
+  grouped_val_doppel = group_samples_by_class(
+    meta_data_df = meta_data_df,
+    samples = val_train_doppels$val_doppel
+  )
+  
+  val_non_doppel = c()
+  # For each val class, select the same number of non_doppel_samples
+  for (class in names(grouped_val_doppel)){
+    num_val_doppel_class = length(grouped_val_doppel[[class]])
+    set.seed(sampling_seed)
+    val_non_doppel_class = sample(grouped_non_doppel[[class]], num_val_doppel_class)
+    val_non_doppel = c(val_non_doppel, val_non_doppel_class)
+  }
+  
+  train_non_doppel = setdiff(non_doppel_samples, val_non_doppel)
+  
+  return_list = list()
+  return_list$val_doppel = val_train_doppels$val_doppel
+  return_list$train_doppel = val_train_doppels$train_doppel
+  return_list$val_non_doppel = val_non_doppel
+  return_list$train_non_doppel = train_non_doppel
+  
+  return(return_list)
+}
+
+lymph_lung_all_train_val = get_val_train_non_doppel_samples(
+  val_train_doppels=lymph_lung_val_train_doppels,
+  planning_list=lymph_lung_planning_list
+)
+```
+
+
+```{r}
+# This function checks the distribution of classes in all vectors of a list
+
+check_class_dist <- function(all_train_val, planning_list){
+  meta_data_df = planning_list$meta_data
+  doppel_mapping = planning_list$doppel_mapping 
+  
+  classes = unique(meta_data_df$Class)
+  col_list = list()
+  row_name_vec = c()
+  
+  for (sample_vec_name in names(all_train_val)){
+    class_dist =group_samples_by_class(
+      samples=all_train_val[[sample_vec_name]],
+      meta_data_df = meta_data_df)
+    for (class in classes){
+      if (class %in% names(class_dist)){
+        col_list[[class]] = c(col_list[[class]],
+                              length(class_dist[[class]]))
+      } else{ 
+        col_list[[class]] = c(col_list[[class]], 0)
+      }
+      
+    }
+    row_name_vec = c(row_name_vec, sample_vec_name)
+  }
+  return(as.data.frame(col_list, row.names=row_name_vec))
+}
+
+lymph_lung_all_train_val_dist = check_class_dist(
+  all_train_val = lymph_lung_all_train_val, 
+  planning_list = lymph_lung_planning_list
+)
+```
+
+
+
+```{r}
+# Oversample for training
+oversample_training <- function(all_train_val,
+                                planning_list){
+  meta_data_df = planning_list$meta_data
+  doppel_mapping = planning_list$doppel_mapping 
+  
+  training_samples = c(all_train_val[['train_doppel']],
+                       all_train_val[["train_non_doppel"]])
+
+  grouped_training_samples = group_samples_by_class(
+    samples = training_samples,
+    meta_data_df = meta_data_df
+  )
+  
+  smallest_class_size = NA
+  smallest_class = NA
+  largest_class_size = NA
+  for (class in names(grouped_training_samples)){
+    class_size = length(grouped_training_samples[[class]])
+    if (is.na(smallest_class_size) || 
+        (class_size < smallest_class_size)){
+      smallest_class_size = class_size
+      smallest_class = class
+    }
+    if (is.na(largest_class_size) || 
+        (class_size > largest_class_size)){
+      largest_class_size = class_size
+    }
+  }
+  
+  train_non_doppel_extra = sample(
+    grouped_training_samples[[smallest_class]],
+    largest_class_size-smallest_class_size,
+    replace=TRUE)
+  
+  return_list = all_train_val
+  return_list$train_non_doppel_extra = train_non_doppel_extra
+  
+  return(return_list)
+}
+
+
+lymph_lung_all_train_val = oversample_training(
+  all_train_val = lymph_lung_all_train_val, 
+  planning_list = lymph_lung_planning_list
+)
+```
+
+
+```{r}
+lymph_lung_all_train_val_dist = check_class_dist(
+  all_train_val = lymph_lung_all_train_val, 
+  planning_list = lymph_lung_planning_list
+)
+```
+
+```{r}
+interlace_two_vectors <- function(vec1, vec2){
+  return(c(rbind(vec1, vec2)))
+}
+
+generate_val_vectors <- function(val_samples, meta_data_df){
+  class_dist_samples = group_samples_by_class(
+    samples = val_samples,
+    meta_data_df = meta_data_df)
+  return(interlace_two_vectors(class_dist_samples[[1]], 
+                               class_dist_samples[[2]]))
+}
+
+make_experiment_plan <- function(all_train_val, 
+                                 planning_list, 
+                                 increment){
+  meta_data_df = planning_list$meta_data
+  doppel_mapping = planning_list$doppel_mapping 
+  
+  return_list = list()
+  return_list$experiment_plan = list()
+  
+  number_of_doppel = 0
+  number_of_val_samples = length(all_train_val$val_doppel)
+  
+  val_doppel = generate_val_vectors(all_train_val$val_doppel,
+                                    meta_data_df=meta_data_df)
+  val_non_doppel = generate_val_vectors(all_train_val$val_non_doppel,
+                                        meta_data_df=meta_data_df)
+  
+  constant_train_samples = c(
+    all_train_val[["train_doppel"]],
+    all_train_val[["train_non_doppel"]])
+  constant_train_samples = c(
+    constant_train_samples, 
+    all_train_val[["train_non_doppel_extra"]]
+  )
+  
+  while (TRUE){
+    val = head(val_doppel, number_of_doppel)
+    val = c(val,
+            tail(val_non_doppel, 
+                 number_of_val_samples-number_of_doppel)
+            )
+    
+    train = tail(val_non_doppel,
+                 number_of_val_samples-number_of_doppel)
+    train = c(train,
+              head(val_non_doppel, number_of_doppel))
+    train = c(train, constant_train_samples)
+    
+    name_of_train_val_set = paste("Doppel", number_of_doppel, sep="_")
+    train_name = paste(name_of_train_val_set, "train", sep=".")
+    val_name = paste(name_of_train_val_set, "valid", sep=".")
+    return_list$experiment_plan[[train_name]] = train
+    return_list$experiment_plan[[val_name]] = val
+    
+    number_of_doppel = number_of_doppel + increment
+  
+    if (number_of_doppel > number_of_val_samples){
+      break
+    }
+  }
+  
+  return_list$class_dist = check_class_dist(
+    all_train_val = return_list$experiment_plan,
+    planning_list = planning_list
+  )
+  
+  return_list$sample_types = all_train_val
+  
+  
+  return(return_list)
+}
+
+lymph_lung_ex_plan = make_experiment_plan(
+  all_train_val = lymph_lung_all_train_val, 
+  planning_list = lymph_lung_planning_list,
+  increment=10
+)
+```
+
+
+```{r}
+# Save it to csv
+pad_vector <- function(vec, n){
+  return(c(vec, rep(NA, n-length(vec))))
+}
+
+
+generate_df_from_list <- function(ex_plan){
+  max_length = max(unlist(lapply(ex_plan$experiment_plan, length)))
+  padded_list = lapply(ex_plan$experiment_plan, 
+                       pad_vector, n=max_length)
+  return(as.data.frame(padded_list))
+  
+}
+write.csv(generate_df_from_list(lymph_lung_ex_plan), 
+          ex_plan_lymph_lung_csv_filepath,
+          row.names=FALSE,
+          na = "")
+
+```
