@@ -14,7 +14,7 @@ library(ggpubr)
 
 display_doppel = list(
   "DMD"=list(
-    "Unbalanced"=doppel_hp_removed,
+    "Unbalanced"=doppel_hp_rem,
     "Balanced"=doppel_hp_over_rem
   ),
   "Leukaemia"=list(
@@ -28,9 +28,9 @@ display_doppel = list(
 )
 
 limits = list(
-  "DMD"=c(0.75, 1),
-  "Leukaemia"=c(0.6, 1),
-  "ALL"=c(0.75, 1)
+  "DMD"=c(-0.1, 0.55),
+  "Leukaemia"=c(-0.15, 0.75),
+  "ALL"=c(-0.05, 0.5)
 )
 
 labels = list(
@@ -133,32 +133,30 @@ library(glue)
 dv_plot_info = list(
   "DMD"=list(
     "veri_result"=veri_results_dmd,
-    "ori_names"=c("Doppel_0", "Doppel_1","Doppel_2","Doppel_3", 
-                  "Pos_Con_3", "Neg_Con"),
-    "new_names"=c("0 Doppel", "1 Doppel", "2 Doppel", "3 Doppel", 
-                  "3 Pos Con", "Neg Con"),
-    "training_samples"=24,
-    "validation_samples"=6
+    "ori_names"=c("Doppel_0", "Doppel_2","Doppel_4",
+                  "Doppel_6", "Doppel_8", "Doppel_10", 
+                  "Pos_Con_10", "Neg_Con"),
+    "new_names"=c("0 Doppel", "2 Doppel", "2 Doppel", 
+                  "6 Doppel","8 Doppel", "10 Doppel", 
+                  "10 Pos Con", "Neg Con"),
+    "training_samples"=23,
+    "validation_samples"=10
   ),
   "Leukaemia"=list(
     "veri_result"=veri_results_leuk,
-    "ori_names"=c("Doppel_0", "Doppel_2","Doppel_4","Doppel_6",
-                  "Doppel_8", "Doppel_10", "Neg_Con", "Pos_Con"),
-    "new_names"=c("0 Doppel", "2 Doppel\n (Only In\n Balanced)", 
-                  "4 Doppel","6 Doppel","8 Doppel", "10 Doppel", 
-                  "Neg Con", "10 Pos Con"),
+    "ori_names"=c("Doppel_0", "Doppel_2", "Doppel_4", 
+                  "Doppel_6","Pos_Con_6", "Neg_Con"),
+    "new_names"=c("0 Doppel", "2 Doppel", "4 Doppel",
+                  "6 Doppel","6 Pos Con", "Neg Con"),
     "training_samples"=48,
     "validation_samples"=10
   ),
   "ALL"=list(
     "veri_result"=veri_results_all,
-    "ori_names"=c("Doppel_0", "Doppel_1_Unbal", "Doppel_1", 
-                  "Doppel_2","Doppel_3","Doppel_4", "Doppel_5",
-                  "Neg_Con", "Pos_Con_5"),
-    "new_names"=c("0 Doppel", "1 Doppel\n (Only In\n Unbalanced)",
-                  "1 Doppel\n (Only In\n Balanced)", "2 Doppel",
-                  "3 Doppel","4 Doppel", "5 Doppel", "Neg Con", 
-                  "5 Pos Con"),
+    "ori_names"=c("Doppel_0", "Doppel_2", "Doppel_4", 
+                  "Doppel_5","Pos_Con_5", "Neg_Con"),
+    "new_names"=c("0 Doppel", "2 Doppel","4 Doppel", 
+                  "5 Doppel","Pos Con 5", "Neg Con"),
     "training_samples"=30,
     "validation_samples"=10
   )
@@ -214,3 +212,86 @@ microarray_dv_plots
 ggsave(filename = file.path(images_dir, "microarray_dv.tiff"), width = 8, height = 10, device='tiff')
 ```
 
+
+### Additional
+
+```{r fig.width=8, fig.height=10}
+if (!"ggpubr" %in% installed.packages()){
+  install.packages("ggpubr")
+}
+library(ggpubr)
+library(glue)
+
+dv_add_plot_info = list(
+  "DMD"=list(
+    "veri_result"=veri_results_dmd_add,
+    "ori_names"=c("Doppel_0", "DMD_13_P","NOR_2_P",
+                  "NOR_7_P", "Pos_Con_1", "Neg_Con"),
+    "new_names"=c("0 Doppel", "DMD_13_P\n(Unbal)","NOR_2_P\n(Unbal)",
+                  "NOR_7_P\n(Unbal)", "1 Pos Con", "Neg Con"),
+    "training_samples"=23,
+    "validation_samples"=10
+  ),
+  "Leukaemia"=list(
+    "veri_result"=veri_results_leuk_add,
+    "ori_names"=c("Doppel_0", "ALL_22_G", "ALL_19_G", 
+                  "Pos_Con_1", "Neg_Con"),
+    "new_names"=c("0 Doppel", "ALL_22_G\n(Bal)", "ALL_19_G\n(Bal)",
+                  "1 Pos Con", "Neg Con"),
+    "training_samples"=48,
+    "validation_samples"=10
+  ),
+  "ALL"=list(
+    "veri_result"=veri_results_all_add,
+    "ori_names"=c("Doppel_0", "E2A_2_R", "E2A_13_R", 
+                  "Pos_Con_1", "Neg_Con"),
+    "new_names"=c("0 Doppel", "E2A_2_R\n(Unbal)","E2A_13_R\n(Unbal)", 
+                  "Pos Con 1", "Neg Con"),
+    "training_samples"=30,
+    "validation_samples"=10
+  )
+)
+
+
+dataset_dv_add_subplots = lapply(
+  names(dv_add_plot_info),
+  function(dataset_name){
+    veri_results = dv_add_plot_info[[dataset_name]]$veri_result
+    ori_name = dv_add_plot_info[[dataset_name]]$ori_names
+    new_name = dv_add_plot_info[[dataset_name]]$new_names
+    current_plot = visualiseVerificationResults(
+        veri_results, ori_name, new_name
+    ) + 
+      coord_cartesian(ylim = c(0, 1.1)) +
+      scale_y_continuous(breaks=seq(0,1,0.2)) +
+      labs(subtitle=glue("{dv_add_plot_info[[dataset_name]]$training_samples} Training, {dv_add_plot_info[[dataset_name]]$validation_samples} Validation")) + 
+      theme(plot.subtitle=element_text(size=11, hjust=0.5, color="#2e2e2e")) + 
+      theme(plot.title=element_text(size=12, hjust=0.5, color="black", face="bold"))
+    current_plot = ggpar(current_plot, title=dataset_name) 
+    return(current_plot)
+  }
+)
+
+# Arrange both plots
+microarray_dv_add_plots = ggarrange(
+  plotlist = dataset_dv_add_subplots,
+  align='v',
+  nrow=3,
+  ncol=1,
+  common.legend = TRUE,
+  legend = "bottom",
+  labels = c("A", "B", "C")
+)
+
+# Add big title above
+microarray_dv_add_plots = annotate_figure(
+  microarray_dv_add_plots,
+  top = text_grob("Functional Doppelganger Verification (Additional)",
+  color = "black",
+  face = "bold",
+  size = 18)
+)
+
+microarray_dv_add_plots
+
+```

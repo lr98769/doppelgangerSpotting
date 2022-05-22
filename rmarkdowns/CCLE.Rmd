@@ -28,6 +28,7 @@ functions_dir = "../functions"
 source(file.path(functions_dir, "process_dataframes.R"))
 source(file.path(functions_dir, "process_vectors.R"))
 source(file.path(functions_dir, "process_lists.R"))
+source(file.path(functions_dir,"analysis_functions.R"))
 source(file.path(functions_dir, "output_functions.R"))
 source(file.path(functions_dir, "planning_functions.R"))
 ```
@@ -309,7 +310,7 @@ lymph_lung_veri = verifyDoppelgangers(
   experiment_plan_filename = ex_plan_lymph_lung_csv_filepath,
   raw_data = lymph_lung,
   meta_data = lymph_lung_meta,
-  feature_set_portion = 0.1,
+  feature_set_portion = 0.01,
   do_batch_corr = FALSE,
   k=17,
   size_of_val_set = 50
@@ -321,6 +322,14 @@ Visualise the results
 ```{r fig.width=10, fig.height=5}
 visualiseVerificationResults(lymph_lung_veri) + ggtitle(label="Accuracy of KNN Models", subtitle="HAEMATOPOIETIC_AND_LYMPHOID_TISSUE + LUNG\nValidation Set Size = 50 Samples") + theme(plot.subtitle = element_text(hjust = 0.5))
 ```
+```{r}
+check_veri_stats(
+  meta_data_df = lymph_lung_meta,
+  veri_results = lymph_lung_veri,
+  doppel_results = lymph_lung_doppel
+)
+```
+
 
 ## b) "Large Intestine" and "Upper Aerodigestive Tract" Cancer
 
@@ -369,7 +378,7 @@ large_upper_veri = verifyDoppelgangers(
   experiment_plan_filename = ex_plan_large_upper_csv_filepath,
   raw_data = large_upper,
   meta_data = large_upper_meta,
-  feature_set_portion = 0.1,
+  feature_set_portion = 0.01,
   do_batch_corr = FALSE,
   k=9,
   size_of_val_set = 10
@@ -380,6 +389,14 @@ View verification results
 
 ```{r fig.width=10, fig.height=5}
 visualiseVerificationResults(large_upper_veri) + ggtitle(label="Accuracy of KNN Models", subtitle="LARGE_INTESTINE + UPPER_AERODIGESTIVE_TRACT\nValidation Set Size = 10 Samples") + theme(plot.subtitle = element_text(hjust = 0.5))
+```
+
+```{r}
+check_veri_stats(
+  meta_data_df = large_upper_meta,
+  veri_results = large_upper_veri,
+  doppel_results = large_upper_doppel
+)
 ```
 
 # 4. Arrange Plots
@@ -436,7 +453,7 @@ ccle_dv_plots = ggarrange(
   ggpar(visualiseVerificationResults(lymph_lung_veri,
     c("Doppel_0","Doppel_10", "Doppel_20", "Doppel_30", "Doppel_40","Doppel_50", "Pos_Con_50", "Neg_Con"),
     c("0 Doppel", "10 Doppel", "20 Doppel", "30 Doppel", "40 Doppel", "50 Doppel", "50 Pos Con", "Neg Con")) +
-    coord_cartesian(ylim = c(0.3, 1.05)),
+    coord_cartesian(ylim = c(0.35, 1.05)),
     title="lymph_lung") +
     scale_y_continuous(breaks=seq(0.3,1,0.1)) +
     labs(subtitle="311 Training, 50 Validation") + 

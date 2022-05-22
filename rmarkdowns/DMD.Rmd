@@ -38,6 +38,9 @@ Load functions for pre-processing and analysis:
 functions_dir = "../functions"
 source(file.path(functions_dir,"preprocessing_functions.R"))
 source(file.path(functions_dir,"analysis_functions.R"))
+source(file.path(functions_dir,"planning_functions.R"))
+source(file.path(functions_dir,"process_vectors.R"))
+source(file.path(functions_dir,"process_lists.R"))
 ```
 
 ## 1) Import the DMD datasets
@@ -73,9 +76,9 @@ dmd_p_meta = getMetaDataDataframe(df = dmd_p, batch_name = "P")
 
 ### a) Doppelgangers within HaslettData
 
-22 Doppelgangers found within HaslettData.
+33 Doppelgangers found within HaslettData.
 ```{r}
-doppel_h = getPPCCDoppelgangers(dmd_h, dmd_h_meta)
+doppel_h = getPPCCDoppelgangers(dmd_h, dmd_h_meta, do_min_max = TRUE)
 table(doppel_h$PPCC_df$DoppelgangerLabel)
 ```
 
@@ -85,10 +88,10 @@ visualisePPCCDoppelgangers(doppel_h)
 
 ### b) Doppelgangers within PescatoriData
 
-There are 16 doppelgangers within PescatoriData.
+There are 8 doppelgangers within PescatoriData.
 
 ```{r}
-doppel_p = getPPCCDoppelgangers(dmd_p, dmd_p_meta)
+doppel_p = getPPCCDoppelgangers(dmd_p, dmd_p_meta, do_min_max = TRUE)
 table(doppel_p$PPCC_df$DoppelgangerLabel)
 ```
 
@@ -111,9 +114,9 @@ dmd = data.frame(cbind(dmd_h[shared_variables_dmd, ],
 Finding doppelgangers between both datasets
 
 ```{r}
-doppel_hp = getPPCCDoppelgangers(dmd, dmd_meta)
+doppel_hp = getPPCCDoppelgangers(dmd, dmd_meta, do_min_max = TRUE)
 ```
-20 Doppelgangers between HaslettData and PescatoriData.
+54 Doppelgangers between HaslettData and PescatoriData.
 
 ```{r}
 table(doppel_hp$PPCC_df$DoppelgangerLabel)
@@ -130,11 +133,11 @@ doppel_hp$PPCC_df[doppel_hp$PPCC_df$Sample1=="NOR_12_H" &
                     doppel_hp$PPCC_df$PPCC<0,]
 ```
 ```{r fig.width=8, fig.height=5}
-doppel_hp_removed = doppel_hp
-doppel_hp_removed$PPCC_df = 
-  doppel_hp_removed$PPCC_df[
-    doppel_hp_removed$PPCC_df$Sample1!="NOR_12_H",]
-visualisePPCCDoppelgangers(doppel_hp_removed)
+doppel_hp_rem = remove_sample_from_doppel_result(
+  doppel_result = doppel_hp,
+  sample = "NOR_12_H"
+)
+visualisePPCCDoppelgangers(doppel_hp_rem)
 ```
 
 ## 3) Batch Effect on Doppelganger Identification
@@ -164,7 +167,8 @@ table( dmd_meta_over$Class, dmd_meta_over$Batch)
 
 
 ```{r}
-doppel_hp_over = getPPCCDoppelgangers(dmd_over, dmd_meta_over)
+doppel_hp_over = getPPCCDoppelgangers(dmd_over, dmd_meta_over,
+                                      do_min_max = TRUE)
 # Remove excess sample pairs
 doppel_hp_over = remove_all_dup(doppel_hp_over)
 ```
@@ -175,20 +179,31 @@ When there is an absence of batch imbalance, lesser doppelgangers were identifie
 table(doppel_hp_over$PPCC_df$DoppelgangerLabel)
 ```
 
-One less pair was identified when batch imbalances were eliminated. 
+2 more pairs were identified
+
+```{r}
+dfSetDifference(
+  doppel_hp_over$PPCC_df[doppel_hp_over$PPCC_df$DoppelgangerLabel=="Doppelganger", ],
+  doppel_hp$PPCC_df[doppel_hp$PPCC_df$DoppelgangerLabel=="Doppelganger", ]
+)
+```
+
+9 pairs were not identified the the batch balanced case
 
 ```{r}
 dfSetDifference(
   doppel_hp$PPCC_df[doppel_hp$PPCC_df$DoppelgangerLabel=="Doppelganger", ],
   doppel_hp_over$PPCC_df[doppel_hp_over$PPCC_df$DoppelgangerLabel=="Doppelganger", ]
-  )
+ )
 ```
 
 The presence of batch imbalances decreased PPCC slightly in this case. 
 
 ```{r}
-doppel_hp_over_rem = doppel_hp_over
-doppel_hp_over_rem$PPCC_df = doppel_hp_over_rem$PPCC_df[doppel_hp_over_rem$PPCC_df$Sample1!="NOR_12_H",]
+doppel_hp_over_rem = remove_sample_from_doppel_result(
+  doppel_result = doppel_hp_over,
+  sample = "NOR_12_H"
+)
 visualisePPCCDoppelgangers(doppel_hp_over_rem)
 ```
 
@@ -223,7 +238,7 @@ autoplot(x=2, y=3, pca_res, data = dmd_meta, colour = 'Class', shape="Batch")
 #### With batch imbalance
 
 ```{r}
-pca_res = prcomp(t(doppel_hp$Batch_corrected), scale. = TRUE)
+pca_res = prcomp(t(doppel_hp$Processed_data), scale. = TRUE)
 autoplot(x=1, y=2, pca_res, data = dmd_meta, colour = 'Class', shape="Batch")
 ```
 
@@ -234,7 +249,7 @@ autoplot(x=2, y=3, pca_res, data = dmd_meta, colour = 'Class', shape="Batch")
 #### Without batch imbalance
 
 ```{r}
-pca_res = prcomp(t(doppel_hp_over$Batch_corrected), scale. = TRUE)
+pca_res = prcomp(t(doppel_hp_over$Processed_data), scale. = TRUE)
 autoplot(x=1, y=2, pca_res, data = dmd_meta, colour = 'Class', shape="Batch")
 ```
 ```{r}
@@ -242,123 +257,86 @@ autoplot(x=2, y=3, pca_res, data = dmd_meta, colour = 'Class', shape="Batch")
 ```
 
 Output the doppelgangers for easier planning
+
 ```{r}
-if (!"openxlsx" %in% installed.packages()){
-  install.packages("openxlsx")
-}
-library(openxlsx)
-wb = createWorkbook()
-addWorksheet(wb, "MetaData")
-addWorksheet(wb, "DoppelgangerPairs")
-addWorksheet(wb, "ExtraPairs_Unbal-Bal")
-addWorksheet(wb, "DoppelgangerSamplesH")
-addWorksheet(wb, "DoppelgangerSamplesP")
-
-writeData(wb, 1, dmd_meta)
-writeData(wb, 2, 
-          doppel_hp_over$PPCC_df
-          [doppel_hp_over$PPCC_df$DoppelgangerLabel=="Doppelganger",])
-writeData(wb, 3, dfSetDifference(
-  doppel_hp$PPCC_df
-  [doppel_hp$PPCC_df$DoppelgangerLabel=="Doppelganger",],
-  doppel_hp_over$PPCC_df
-  [doppel_hp_over$PPCC_df$DoppelgangerLabel=="Doppelganger",]
-  )
+output_cross_batch_planning_xlsx(
+  meta_data_df = dmd_meta,
+  doppel_results_bal = doppel_hp_over_rem,
+  doppel_results_unbal = doppel_hp_rem,
+  filename = "dmd_planning.xlsx"
 )
-writeData(wb, 4, getDoppelnNonDoppelSamples(
-  doppel_result = doppel_hp_over,
-  metadata = dmd_meta,
-  batchname = "H"))
-writeData(wb, 5, getDoppelnNonDoppelSamples(
-  doppel_result = doppel_hp_over,
-  metadata = dmd_meta,
-  batchname = "P"))
-saveWorkbook(wb, file = file.path(planning_data_dir, "dmd_planning.xlsx"), overwrite = TRUE)
-
 ```
 
 ## 4) Testing the Doppelganger Effect
+Here we test the doppelganger effects of PPCC data doppelgangers identified in the balanced case
 
 ```{r}
 veri_results_dmd =  verifyDoppelgangers(
   file.path(experiment_plans_dir,"dmd_experiment_plan.csv"),
-  doppel_hp_over$Batch_corrected,
+  doppel_hp_over$Processed_data,
   dmd_meta,
   do_batch_corr = FALSE,
-  size_of_val_set = 6
-  )
+  size_of_val_set = 10,
+  k=5
+)
 ```
 
-```{r}
-originalTrainValidNames =  c("Doppel_0", "Doppel_1","Doppel_2","Doppel_3", "Pos_Con_3", "Neg_Con")
+```{r fig.height=5, fig.width=10}
+originalTrainValidNames =  c("Doppel_0", "Doppel_2","Doppel_4","Doppel_6", "Doppel_8", "Doppel_10", "Pos_Con_10", "Neg_Con")
 
-newTrainValidNames =  c("0 Doppel", "1 Doppel", "2 Doppel", "3 Doppel", "Pos Con 3", "Neg Con")
+newTrainValidNames =  c("0 Doppel", "2 Doppel", "2 Doppel", "6 Doppel","8 Doppel", "10 Doppel", "10 Pos Con", "Neg Con")
 
 visualiseVerificationResults(veri_results_dmd,
                 originalTrainValidNames,
                 newTrainValidNames)
 ```
 
-## Extra Analysis
-
-Exploring PPCC values without batch correction
 ```{r}
-temp = getPPCCDoppelgangers(dmd, 
-                            dmd_meta, 
-                            do_batch_corr = FALSE)
+check_veri_stats(
+  meta_data_df = dmd_meta,
+  veri_results = veri_results_dmd,
+  doppel_results = doppel_hp_over_rem
+)
 ```
+
+Here we test the doppelganger effects of the additionally identified PPCC data doppelgangers 
+
 ```{r}
-visualisePPCCDoppelgangers(temp)
-```
-## Arrange plots
-
-```{r fig.height=4, fig.width=8}
-if (!"ggpubr" %in% installed.packages()){
-  install.packages("ggpubr")
-}
-library(ggpubr)
-
-dmd_plot1 = ggarrange(
-          ggpar(visualisePPCCDoppelgangers(doppel_hp_removed) +
-            coord_cartesian(ylim = c(0.77, 1)),
-            title="Unbalanced Batches"), 
-          ggpar(visualisePPCCDoppelgangers(doppel_hp_over_rem) +
-            coord_cartesian(ylim = c(0.77, 1)),
-            title="Balanced Batches")+ 
-          rremove("ylab") +
-          rremove("y.ticks")+
-          rremove("y.text"), 
-          align='h', 
-          labels=c('A', 'B'),
-          common.legend = T,
-          legend = "bottom"
-          )
-dmd_plot1 = annotate_figure(dmd_plot1, 
-                            top = text_grob("DMD PPCC Distribution & Doppelganger identification", 
-               color = "black",
-               face = "bold", 
-               size = 18))
-dmd_plot1
-ggsave(filename = file.path(images_dir,"dmd_PPCC.tiff"), width = 8, height = 4, device='tiff')
+veri_results_dmd_add =  verifyDoppelgangers(
+  file.path(experiment_plans_dir,"dmd_experiment_plan_additional.csv"),
+  doppel_hp_over$Processed_data,
+  dmd_meta,
+  do_batch_corr = FALSE,
+  size_of_val_set = 10,
+  k=5
+)
 ```
 
-```{r fig.width=10, fig.height=5}
-originalTrainValidNames =  c("Doppel_0", "Doppel_1","Doppel_2","Doppel_3", "Pos_Con_3", "Neg_Con")
+```{r fig.height=5, fig.width=10}
+originalTrainValidNames_add =  c("Doppel_0", "DMD_13_P","NOR_2_P","NOR_7_P", "Pos_Con_1", "Neg_Con")
 
-newTrainValidNames =  c("0 Doppel", "1 Doppel", "2 Doppel", "3 Doppel", "3 Pos Con", "Neg Con")
+newTrainValidNames_add =  c("0 Doppel", "DMD_13_P\n(Unbal)","NOR_2_P\n(Unbal)","NOR_7_P\n(Unbal)", "1 Pos Con", "Neg Con")
 
-dmd_plot2 = visualiseVerificationResults(
-                veri_results_dmd,
-                originalTrainValidNames,
-                newTrainValidNames)
-dmd_plot2 = ggpar(dmd_plot2, title="Validation Accuracy of KNN Models (DMD)") + 
-  font("title", size = 18, color = "black", face = "bold") +
-  font("xlab", size = 14, color = "black") +
-  font("xylab", size = 14, color = "black") +
-  font("xy.text", size = 11, color = "black") +
-  font("legend.title", size = 14, color = "black") +
-  font("legend.text", size = 11, color = "black")
-dmd_plot2
-ggsave(filename = file.path(images_dir,"dmd_veri.tiff"), width = 10, height = 5, device='tiff')
+visualiseVerificationResults(veri_results_dmd_add,
+                originalTrainValidNames_add,
+                newTrainValidNames_add)
+```
+
+
+```{r}
+check_veri_stats(
+  meta_data_df = dmd_meta,
+  veri_results = veri_results_dmd_add,
+  doppel_results = doppel_hp
+)
+```
+
+
+```{r}
+check_veri_stats(
+  meta_data_df = dmd_meta,
+  veri_results = veri_results_dmd_add,
+  doppel_results = doppel_hp_over
+)
 ```
 

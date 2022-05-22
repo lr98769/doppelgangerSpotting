@@ -40,6 +40,9 @@ Load functions for pre-processing and analysis:
 functions_dir = "../functions"
 source(file.path(functions_dir,"preprocessing_functions.R"))
 source(file.path(functions_dir,"analysis_functions.R"))
+source(file.path(functions_dir,"planning_functions.R"))
+source(file.path(functions_dir,"process_vectors.R"))
+source(file.path(functions_dir,"process_lists.R"))
 ```
 
 ## 1) Import the DMD datasets
@@ -90,7 +93,8 @@ Finding doppelgangers between both datasets
 
 ```{r}
 doppel_hp_no_combat = getPPCCDoppelgangers(dmd, dmd_meta, 
-                                           do_batch_corr = FALSE)
+                                           do_batch_corr = FALSE,
+                                           do_min_max = FALSE)
 ```
 23 PPCC data Doppelgangers found between HaslettData and PescatoriData.
 
@@ -160,6 +164,16 @@ visualiseVerificationResults(veri_results_dmd_no_combat,
                 newTrainValidNames)
 ```
 
+
+```{r}
+check_veri_stats(
+  meta_data_df = dmd_meta,
+  veri_results = veri_results_dmd_no_combat,
+  doppel_results = doppel_hp_no_combat
+)
+```
+
+
 When the data set was batch corrected before training and validation, an inflationary effect can be observed. However, even in the 0 Doppel case, validation accuracy is already very high. This shows that not all functional doppelgangers between the training and validation set were identified when we do not use batch correction in PPCC data doppelganger identification. This demonstrates the importance of batch correction to the identification algorithm. 
 
 **b) Next, we will observe the validation accuracies when no batch correction is done prior to model training and validation.  **
@@ -198,10 +212,12 @@ veri_results_dmd_no_combat =  verifyDoppelgangers(
   size_of_val_set = 6
   )
 ```
-```{r}
-originalTrainValidNames =  c("Doppel_0", "Doppel_1","Doppel_2","Doppel_3", "Pos_Con_3", "Neg_Con")
 
-newTrainValidNames =  c("0 Doppel", "1 Doppel", "2 Doppel", "3 Doppel", "3 Pos Con", "Neg Con")
+```{r fig.height=5, fig.width=10}
+
+originalTrainValidNames =  c("Doppel_0", "Doppel_2","Doppel_4","Doppel_6", "Doppel_8", "Doppel_10", "Pos_Con_10", "Neg_Con")
+
+newTrainValidNames =  c("0 Doppel", "2 Doppel", "2 Doppel", "6 Doppel","8 Doppel", "10 Doppel", "10 Pos Con", "Neg Con")
 
 visualiseVerificationResults(veri_results_dmd_no_combat,
                 originalTrainValidNames,

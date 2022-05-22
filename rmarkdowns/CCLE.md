@@ -26,6 +26,7 @@ functions_dir = "../functions"
 source(file.path(functions_dir, "process_dataframes.R"))
 source(file.path(functions_dir, "process_vectors.R"))
 source(file.path(functions_dir, "process_lists.R"))
+source(file.path(functions_dir,"analysis_functions.R"))
 source(file.path(functions_dir, "output_functions.R"))
 source(file.path(functions_dir, "planning_functions.R"))
 ```
@@ -181,7 +182,7 @@ end_time = Sys.time()
 end_time - start_time
 ```
 
-    ## Time difference of 2.674701 mins
+    ## Time difference of 2.9549 mins
 
 ``` r
 visualisePPCCDoppelgangers(lymph_lung_doppel) + ggtitle(label="PPCC Doppelganger Identification", subtitle="HAEMATOPOIETIC_AND_LYMPHOID_TISSUE + LUNG") + theme(plot.subtitle = element_text(hjust = 0.5))
@@ -2343,7 +2344,7 @@ end_time = Sys.time()
 end_time - start_time
 ```
 
-    ## Time difference of 11.1602 secs
+    ## Time difference of 12.641 secs
 
 ``` r
 visualisePPCCDoppelgangers(large_upper_doppel) + ggtitle(label="PPCC Doppelganger Identification", subtitle="LARGE_INTESTINE + UPPER_AERODIGESTIVE_TRACT") + theme(plot.subtitle = element_text(hjust = 0.5))
@@ -2606,7 +2607,7 @@ lymph_lung_veri = verifyDoppelgangers(
   experiment_plan_filename = ex_plan_lymph_lung_csv_filepath,
   raw_data = lymph_lung,
   meta_data = lymph_lung_meta,
-  feature_set_portion = 0.1,
+  feature_set_portion = 0.01,
   do_batch_corr = FALSE,
   k=17,
   size_of_val_set = 50
@@ -2628,6 +2629,39 @@ visualiseVerificationResults(lymph_lung_veri) + ggtitle(label="Accuracy of KNN M
 ```
 
 ![](CCLE_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
+
+``` r
+check_veri_stats(
+  meta_data_df = lymph_lung_meta,
+  veri_results = lymph_lung_veri,
+  doppel_results = lymph_lung_doppel
+)
+```
+
+    ##            train_HAEMATOPOIETIC_AND_LYMPHOID_TISSUE train_LUNG
+    ## Doppel_0                                        148        163
+    ## Doppel_10                                       148        163
+    ## Doppel_20                                       148        163
+    ## Doppel_30                                       148        163
+    ## Doppel_40                                       148        163
+    ## Doppel_50                                       148        163
+    ## Pos_Con_50                                      148        163
+    ##            valid_HAEMATOPOIETIC_AND_LYMPHOID_TISSUE valid_LUNG num_doppel_pairs
+    ## Doppel_0                                         25         25                0
+    ## Doppel_10                                        25         25              129
+    ## Doppel_20                                        25         25              180
+    ## Doppel_30                                        25         25              240
+    ## Doppel_40                                        25         25              265
+    ## Doppel_50                                        25         25              268
+    ## Pos_Con_50                                       25         25                0
+    ##            num_valid_doppel_samples
+    ## Doppel_0                          0
+    ## Doppel_10                        10
+    ## Doppel_20                        20
+    ## Doppel_30                        30
+    ## Doppel_40                        40
+    ## Doppel_50                        50
+    ## Pos_Con_50                        0
 
 ## b) “Large Intestine” and “Upper Aerodigestive Tract” Cancer
 
@@ -2701,7 +2735,7 @@ large_upper_veri = verifyDoppelgangers(
   experiment_plan_filename = ex_plan_large_upper_csv_filepath,
   raw_data = large_upper,
   meta_data = large_upper_meta,
-  feature_set_portion = 0.1,
+  feature_set_portion = 0.01,
   do_batch_corr = FALSE,
   k=9,
   size_of_val_set = 10
@@ -2722,7 +2756,40 @@ View verification results
 visualiseVerificationResults(large_upper_veri) + ggtitle(label="Accuracy of KNN Models", subtitle="LARGE_INTESTINE + UPPER_AERODIGESTIVE_TRACT\nValidation Set Size = 10 Samples") + theme(plot.subtitle = element_text(hjust = 0.5))
 ```
 
-![](CCLE_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
+![](CCLE_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
+
+``` r
+check_veri_stats(
+  meta_data_df = large_upper_meta,
+  veri_results = large_upper_veri,
+  doppel_results = large_upper_doppel
+)
+```
+
+    ##           train_UPPER_AERODIGESTIVE_TRACT train_LARGE_INTESTINE
+    ## Doppel_0                               26                    51
+    ## Doppel_1                               26                    51
+    ## Doppel_2                               26                    51
+    ## Doppel_3                               26                    51
+    ## Doppel_4                               26                    51
+    ## Doppel_5                               26                    51
+    ## Pos_Con_5                              26                    51
+    ##           valid_UPPER_AERODIGESTIVE_TRACT valid_LARGE_INTESTINE
+    ## Doppel_0                                5                     5
+    ## Doppel_1                                5                     5
+    ## Doppel_2                                5                     5
+    ## Doppel_3                                5                     5
+    ## Doppel_4                                5                     5
+    ## Doppel_5                                5                     5
+    ## Pos_Con_5                               5                     5
+    ##           num_doppel_pairs num_valid_doppel_samples
+    ## Doppel_0                 0                        0
+    ## Doppel_1                 1                        1
+    ## Doppel_2                 2                        2
+    ## Doppel_3                 4                        3
+    ## Doppel_4                 5                        4
+    ## Doppel_5                 6                        5
+    ## Pos_Con_5                0                        0
 
 # 4\. Arrange Plots
 
@@ -2760,7 +2827,7 @@ ccle_ddi_plots = annotate_figure(
 ccle_ddi_plots
 ```
 
-![](CCLE_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
+![](CCLE_files/figure-gfm/unnamed-chunk-34-1.png)<!-- -->
 
 ``` r
 # Output
@@ -2780,7 +2847,7 @@ ccle_dv_plots = ggarrange(
   ggpar(visualiseVerificationResults(lymph_lung_veri,
     c("Doppel_0","Doppel_10", "Doppel_20", "Doppel_30", "Doppel_40","Doppel_50", "Pos_Con_50", "Neg_Con"),
     c("0 Doppel", "10 Doppel", "20 Doppel", "30 Doppel", "40 Doppel", "50 Doppel", "50 Pos Con", "Neg Con")) +
-    coord_cartesian(ylim = c(0.3, 1.05)),
+    coord_cartesian(ylim = c(0.35, 1.05)),
     title="lymph_lung") +
     scale_y_continuous(breaks=seq(0.3,1,0.1)) +
     labs(subtitle="311 Training, 50 Validation") + 
@@ -2812,7 +2879,7 @@ ccle_dv_plots = annotate_figure(
 ccle_dv_plots
 ```
 
-![](CCLE_files/figure-gfm/unnamed-chunk-34-1.png)<!-- -->
+![](CCLE_files/figure-gfm/unnamed-chunk-36-1.png)<!-- -->
 
 ``` r
 # Output

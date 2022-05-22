@@ -38,6 +38,9 @@ Load functions for pre-processing and analysis:
 functions_dir = "../functions"
 source(file.path(functions_dir,"preprocessing_functions.R"))
 source(file.path(functions_dir,"analysis_functions.R"))
+source(file.path(functions_dir,"planning_functions.R"))
+source(file.path(functions_dir,"process_vectors.R"))
+source(file.path(functions_dir,"process_lists.R"))
 ```
 
 
@@ -69,7 +72,9 @@ leuk_G_meta = getMetaDataDataframe(df = leuk_G,
 ### a) Within the Armstrong Data
 
 ```{r}
-doppel_a = getPPCCDoppelgangers(leuk_A, leuk_A_meta)
+doppel_a = getPPCCDoppelgangers(leuk_A, 
+                                leuk_A_meta,
+                                do_min_max = TRUE)
 ```
 
 ```{r}
@@ -80,7 +85,7 @@ visualisePPCCDoppelgangers(doppel_a)
 doppel_a$cut_off
 ```
 
-There are 100 Doppelgangers. 
+There are 38 Doppelgangers. 
 
 ```{r}
 table(doppel_a$PPCC_df$DoppelgangerLabel) 
@@ -89,7 +94,9 @@ table(doppel_a$PPCC_df$DoppelgangerLabel)
 ### b) Within the Golub Data
 
 ```{r}
-doppel_g = getPPCCDoppelgangers(leuk_G, leuk_G_meta)
+doppel_g = getPPCCDoppelgangers(leuk_G, 
+                                leuk_G_meta,
+                                do_min_max = TRUE)
 ```
 
 ```{r}
@@ -100,7 +107,7 @@ visualisePPCCDoppelgangers(doppel_g)
 doppel_g$cut_off
 ```
 
-There are 76 doppelgangers in total. 
+There are 8 doppelgangers in total. 
 
 ```{r}
 table(doppel_g$PPCC_df$DoppelgangerLabel)
@@ -115,10 +122,12 @@ shared_variables_leuk = intersect(
 leuk = data.frame(cbind(leuk_A[shared_variables_leuk,],
                         leuk_G[shared_variables_leuk,]))
 leuk_meta = data.frame(rbind(leuk_A_meta, leuk_G_meta))
-doppel_ag = getPPCCDoppelgangers(leuk, leuk_meta)
+doppel_ag = getPPCCDoppelgangers(leuk, 
+                                 leuk_meta,
+                                 do_min_max = TRUE)
 ```
 
-There are 28 doppelgangers between ArmstringData and GolubData.
+There are 6 doppelgangers between ArmstringData and GolubData.
 
 ```{r}
 table(doppel_ag$PPCC_df$DoppelgangerLabel)
@@ -135,7 +144,7 @@ visualisePPCCDoppelgangers(doppel_ag)
 
 ### a) If we do not balance the batches prior to doppelganger identification
 
-We get the above result. 28 Doppelgangers will be identified.
+We get the above result. 6 Doppelgangers will be identified.
 
 ```{r}
 table(leuk_meta$Batch)
@@ -153,25 +162,38 @@ table(leuk_meta_over$Class, leuk_meta_over$Batch)
 ```
 
 ```{r}
-doppel_ag_over = getPPCCDoppelgangers(leuk_over, leuk_meta_over)
+doppel_ag_over = getPPCCDoppelgangers(leuk_over, 
+                                      leuk_meta_over,
+                                      do_min_max = TRUE)
 ```
 ```{r}
 doppel_ag_over = remove_all_dup(doppel_ag_over)
 ```
 
-When we balance the batches before doppelganger identification. 35 doppelgangers were identified (More than previous).
+When we balance the batches before doppelganger identification. 9 doppelgangers were identified (More than previous).
 
 ```{r}
 table(doppel_ag_over$PPCC_df$DoppelgangerLabel)
 ```
 
-These 7 pairs were identified as doppelgangers when samples were balanced. 
+These 3 pairs were identified as doppelgangers when samples were balanced. 
 
 ```{r}
 dfSetDifference(
   doppel_ag_over$PPCC_df[
     doppel_ag_over$PPCC_df$DoppelgangerLabel=="Doppelganger",], doppel_ag$PPCC_df[
     doppel_ag$PPCC_df$DoppelgangerLabel=="Doppelganger",])
+```
+
+No extra pairs were identified as doppelgangers in the unbalanced case
+
+```{r}
+dfSetDifference(
+  doppel_ag$PPCC_df[
+    doppel_ag$PPCC_df$DoppelgangerLabel=="Doppelganger",],
+  doppel_ag_over$PPCC_df[
+    doppel_ag_over$PPCC_df$DoppelgangerLabel=="Doppelganger",]
+)
 ```
 
 ```{r}
@@ -210,7 +232,7 @@ autoplot(x=2, y=3, pca_res, data = leuk_meta, colour = 'Class', shape="Batch")
 #### With batch imbalance
 
 ```{r}
-pca_res = prcomp(t(doppel_ag$Batch_corrected), scale. = TRUE)
+pca_res = prcomp(t(doppel_ag$Processed_data), scale. = TRUE)
 autoplot(x=1, y=2, pca_res, data = leuk_meta, colour = 'Class', shape="Batch")
 ```
 ```{r}
@@ -220,7 +242,7 @@ autoplot(x=2, y=3, pca_res, data = leuk_meta, colour = 'Class', shape="Batch")
 #### Without batch imbalance
 
 ```{r}
-pca_res = prcomp(t(doppel_ag_over$Batch_corrected), scale. = TRUE)
+pca_res = prcomp(t(doppel_ag_over$Processed_data), scale. = TRUE)
 autoplot(x=1, y=2, pca_res, data = leuk_meta, colour = 'Class', shape="Batch")
 ```
 
@@ -228,44 +250,25 @@ autoplot(x=1, y=2, pca_res, data = leuk_meta, colour = 'Class', shape="Batch")
 autoplot(x=2, y=3, pca_res, data = leuk_meta, colour = 'Class', shape="Batch")
 ```
 
-Output information from above into excel for planning purposes.
+Output the doppelgangers for easier planning
 
 ```{r}
-if (!"openxlsx" %in% installed.packages()){
-  install.packages("openxlsx")
-}
-library(openxlsx)
-wb = createWorkbook()
-addWorksheet(wb, "MetaData")
-addWorksheet(wb, "DoppelgangerPairs")
-addWorksheet(wb, "ExtraPairs_Bal-Unbal")
-addWorksheet(wb, "DoppelgangerSamplesA")
-addWorksheet(wb, "DoppelgangerSamplesG")
-
-writeData(wb, 1, leuk_meta)
-writeData(wb, 2, doppel_ag_over$PPCC_df[
-  doppel_ag_over$PPCC_df$DoppelgangerLabel=="Doppelganger",])
-writeData(wb, 3, dfSetDifference(
-  doppel_ag_over$PPCC_df[
-    doppel_ag_over$PPCC_df$DoppelgangerLabel=="Doppelganger",], doppel_ag$PPCC_df[
-    doppel_ag$PPCC_df$DoppelgangerLabel=="Doppelganger",]))
-writeData(wb, 4, getDoppelnNonDoppelSamples(
-  doppel_result = doppel_ag_over,
-  metadata = leuk_meta,
-  batchname = "A"))
-writeData(wb, 5, getDoppelnNonDoppelSamples(
-  doppel_result = doppel_ag_over,
-  metadata = leuk_meta,
-  batchname = "G"))
-saveWorkbook(wb, file = file.path(planning_data_dir, "leuk_planning.xlsx"), overwrite = TRUE)
+output_cross_batch_planning_xlsx(
+  meta_data_df = leuk_meta,
+  doppel_results_bal = doppel_ag_over,
+  doppel_results_unbal = doppel_ag,
+  filename = "leuk_planning.xlsx"
+)
 ```
 
 ## 4) Testing for doppelganger effect
 
+Here we test the doppelganger effects of PPCC doppelgangers identified in the balanced case
+
 ```{r}
 veri_results_leuk = verifyDoppelgangers(
       file.path(experiment_plans_dir, "leuk_experiment_plan.csv"),
-      doppel_ag_over$Batch_corrected,
+      doppel_ag_over$Processed_data,
       leuk_meta,
       do_batch_corr = FALSE,
       k=7,
@@ -273,85 +276,58 @@ veri_results_leuk = verifyDoppelgangers(
   )
 ```
 ```{r fig.width=10, fig.height=5}
-originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4","Doppel_6","Doppel_8", "Doppel_10", "Neg_Con", "Pos_Con")
+originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4", "Doppel_6","Pos_Con_6", "Neg_Con")
 
-newTrainValidNames =  c("0 Doppel", "2 Doppel", "4 Doppel","6 Doppel","8 Doppel", "10 Doppel", "Neg Con", "Pos Con")
+newTrainValidNames =  c("0 Doppel", "2 Doppel", "4 Doppel","6 Doppel","6 Pos Con", "Neg Con")
 
 visualiseVerificationResults(veri_results_leuk,
                 originalTrainValidNames,
                 newTrainValidNames)
 ```
-## Extra findings
 
-The importance of balanced batches for verification step
+```{r}
+check_veri_stats(
+  meta_data_df = leuk_meta,
+  veri_results = veri_results_leuk,
+  doppel_results = doppel_ag_over
+)
+```
+
+Here we test the doppelganger effects of PPCC doppelgangers identified in the balanced case but not in the unbalanced cse
+
+```{r}
+veri_results_leuk_add = verifyDoppelgangers(
+    file.path(experiment_plans_dir, "leuk_experiment_plan_additional.csv"),
+    doppel_ag_over$Processed_data,
+    leuk_meta,
+    do_batch_corr = FALSE,
+    k=7,
+    size_of_val_set = 10
+)
+```
 
 ```{r fig.width=10, fig.height=5}
-veri_results_leuk_extra = verifyDoppelgangers(
-     file.path(experiment_plans_dir, "leuk_experiment_plan.csv"),
-      leuk,
-      leuk_meta,
-      k=7,
-      size_of_val_set = 10
-  )
+originalTrainValidNames_add =  c("Doppel_0", "ALL_22_G", "ALL_19_G", "Pos_Con_1", "Neg_Con")
 
-originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4","Doppel_6","Doppel_8", "Doppel_10", "Neg_Con", "Pos_Con")
+newTrainValidNames_add =  c("0 Doppel", "ALL_22_G\n(Bal)", "ALL_19_G\n(Bal)","1 Pos Con", "Neg Con")
 
-newTrainValidNames =  c("0 Doppel", "2 Doppel", "4 Doppel","6 Doppel","8 Doppel", "10 Doppel", "Neg Con", "Pos Con")
-
-visualiseVerificationResults(veri_results_leuk_extra,
-                originalTrainValidNames,
-                newTrainValidNames)
-
-```
-## Arranging plots
-
-```{r fig.height=4, fig.width=8}
-if (!"ggpubr" %in% installed.packages()){
-  install.packages("ggpubr")
-}
-library(ggpubr)
-
-leuk_plot1 = ggarrange(
-          ggpar(visualisePPCCDoppelgangers(doppel_ag) +
-            coord_cartesian(ylim = c(0.58, 1)),
-            title="Unbalanced Batches"), 
-          ggpar(visualisePPCCDoppelgangers(doppel_ag_over) +
-            coord_cartesian(ylim = c(0.58, 1)),
-            title="Balanced Batches")+ 
-          rremove("ylab") +
-          rremove("y.ticks")+
-          rremove("y.text"), 
-          align='h', 
-          labels=c('A', 'B'),
-          common.legend = T,
-          legend = "bottom"
-          )
-leuk_plot1 = annotate_figure(leuk_plot1, 
-                            top = text_grob("Leukaemia PPCC Distribution & Doppelganger identification", 
-               color = "black",
-               face = "bold", 
-               size = 18))
-leuk_plot1
-ggsave(filename = file.path(images_dir, "leuk_PPCC.tiff"), width = 8, height = 4, device='tiff')
+visualiseVerificationResults(veri_results_leuk_add,
+                originalTrainValidNames_add,
+                newTrainValidNames_add)
 ```
 
-
-```{r fig.width=10, fig.height=5}
-originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4","Doppel_6","Doppel_8", "Doppel_10", "Neg_Con", "Pos_Con")
-
-newTrainValidNames =  c("0 Doppel", "2 Doppel\n (Only In\n Balanced)", "4 Doppel","6 Doppel","8 Doppel", "10 Doppel", "Neg Con", "10 Pos Con")
-
-leuk_plot2 = visualiseVerificationResults(veri_results_leuk,
-                 originalTrainValidNames,
-                 newTrainValidNames)
-leuk_plot2 = ggpar(leuk_plot2, title="Validation Accuracy of KNN Models (Leukaemia)") +
-  font("title", size = 18, color = "black", face = "bold") +
-  font("xlab", size = 14, color = "black") +
-  font("xylab", size = 14, color = "black") +
-  font("xy.text", size = 11, color = "black") +
-  font("legend.title", size = 14, color = "black") +
-  font("legend.text", size = 11, color = "black")
-leuk_plot2
-ggsave(filename = file.path(images_dir, "leuk_veri.tiff"), width = 10, height = 5, device='tiff')
+```{r}
+check_veri_stats(
+  meta_data_df = leuk_meta,
+  veri_results = veri_results_leuk_add,
+  doppel_results = doppel_ag_over
+)
 ```
 
+```{r}
+check_veri_stats(
+  meta_data_df = leuk_meta,
+  veri_results = veri_results_leuk_add,
+  doppel_results = doppel_ag
+)
+```

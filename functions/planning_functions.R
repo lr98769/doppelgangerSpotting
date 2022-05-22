@@ -6,6 +6,12 @@
 #    partner)
 generate_planning_dataframes <- function(meta_data_df,
                                     doppel_results){
+  if (dim(doppel_results$PPCC_df)[1] == 0){
+    return_list = list()
+    return_list[["meta_data"]] = meta_data_df
+    return_list[["doppel_mapping"]] = data.frame()
+    return(return_list)
+  }
   return_list = list()
   # Sort meta data
   meta_data_df = meta_data_df[
@@ -429,13 +435,39 @@ add_train_valid_stats <- function(experiment_plan,
   return(experiment_plan)
 }
 
+# Alternate the samples according to their classes
+alternate_samples <- function(sample_vec, meta_data_df){
+  return_vec = c()
+  
+  class_list = create_class_list(sample_vec = sample_vec, 
+                                 meta_data_df = meta_data_df)
+  
+  if (length(class_list) == 1){
+    return(sample_vec)
+  }
+  
+  random_class = names(class_list)
+  for (sample in class_list[[1]]){
+    return_vec = c(return_vec, sample)
+    if (length(class_list[[2]])==0){
+      return_vec = c(return_vec, class_list[[1]])
+      break;
+    } else {
+      return_vec = c(return_vec, head(class_list[[2]], 1))
+      class_list[[2]] = tail(class_list[[2]], length(class_list[[2]])-1)
+    }
+  }
+  if (length(class_list[[2]])>0){
+    return_vec = c(return_vec, class_list[[2]])
+  }
+  return(return_vec)
+}
 
 
 # Generates an experiment plan with the planning list and val_doppel given by the user
 generate_experiment_plan <- function(planning_list,
                                      valid_doppel,
-                                     num_samples_added,
-                                     shuffle_seed=2022){
+                                     num_samples_added){
   experiment_plan = list()
   
   # 1. Load dataframes
@@ -471,9 +503,10 @@ generate_experiment_plan <- function(planning_list,
   train_doppel = setdiff(all_doppel, valid_doppel)
   
   print("- Generating valid_doppel")
-  # 3b) Shuffle the validation doppel samples
-  set.seed(shuffle_seed)
-  valid_doppel = sample(valid_doppel)
+  # 3b) Rearrange the validation doppel samples such that 
+  #     we alternate between classes
+  valid_doppel = alternate_samples(sample_vec = valid_doppel,
+                                   meta_data_df = meta_data_df)
   
   print("- Generating valid_non_doppel")
   # 3c) Get valid non doppel
@@ -529,3 +562,184 @@ generate_experiment_plan <- function(planning_list,
   print("Experiment plan generated!")
   return(experiment_plan)
 }
+
+##### Microarray planning functions
+
+# Get set difference between two doppelganger results
+# - Find doppelganger samples that are present in doppel 1 but not in doppel 2 n the PPCC_df
+setdiff_between_doppelganger_results <- function(doppel_result_1,
+                                                 doppel_result_2){
+  return_list = doppel_result_1
+  doppel_df_1 = doppel_result_1$PPCC_df[
+    doppel_result_1$PPCC_df$DoppelgangerLabel=="Doppelganger",
+  ]
+  doppel_df_2= doppel_result_1$PPCC_df[
+    doppel_result_2$PPCC_df$DoppelgangerLabel=="Doppelganger",
+  ]
+  return_list$PPCC_df = dfSetDifference(doppel_df_1, doppel_df_2)
+  
+  return(return_list)
+}
+
+# Get additional doppel samples identified in bal and unbal cases
+# - Doppelganger samples identified in the bal case but not in the unbal case
+# - Doppelganger samples identified in the unbal case but not in the bal case
+get_additional_doppel_samples <- function(doppel_bal,
+                                          doppel_unbal){
+  bal_doppel_df = doppel_bal$PPCC_df[
+    doppel_bal$PPCC_df$DoppelgangerLabel == "Doppelganger",
+  ]
+  unbal_doppel_df = doppel_unbal$PPCC_df[
+    doppel_unbal$PPCC_df$DoppelgangerLabel == "Doppelganger",
+  ]
+  bal_doppel_samples = union(
+    bal_doppel_df$Sample1, 
+    bal_doppel_df$Sample2
+  )
+  unbal_doppel_samples = union(
+    unbal_doppel_df$Sample1,
+    unbal_doppel_df$Sample2
+  )
+  in_bal_not_in_unbal_doppel_samples = setdiff(bal_doppel_samples,
+                                               unbal_doppel_samples)
+  in_unbal_not_in_bal_doppel_samples = setdiff(unbal_doppel_samples,
+                                               bal_doppel_samples)
+  # pad the vectors if they are not the same length
+  n = max(
+    length(in_bal_not_in_unbal_doppel_samples),
+    length(in_unbal_not_in_bal_doppel_samples)
+  )
+  in_bal_not_in_unbal_doppel_samples = pad(
+    in_bal_not_in_unbal_doppel_samples, 
+    n
+  )
+  in_unbal_not_in_bal_doppel_samples = pad(
+    in_unbal_not_in_bal_doppel_samples,
+    n
+  )
+  
+  return(
+    data.frame(list(
+      "bal-unbal_doppel_samples" = in_bal_not_in_unbal_doppel_samples,
+      "unbal-bal_doppel_samples" = in_unbal_not_in_bal_doppel_samples
+    ))
+  )
+}
+
+# Output relevant sheets for the planning of validation experiment
+output_cross_batch_planning_xlsx <- function(meta_data_df,
+                                             doppel_results_bal,
+                                             doppel_results_unbal,
+                                             filename){
+  print("0. Load openxlsx library")
+  if (!"openxlsx" %in% installed.packages()){
+    install.packages("openxlsx")
+  }
+  library(openxlsx)
+  
+  print("1. Preprocessing data")
+  # Get data sets
+  batches = unique(meta_data_df$Batch)
+  
+  print(" a. Preprocess meta data df")
+  # 1. Remove any sample present in meta_data_df and not present in doppel_results or doppel_results_over
+  meta_data_df = data.frame(meta_data_df)
+  intersecting_samples = intersect(
+    colnames(doppel_results_bal$Processed_data), 
+    colnames(doppel_results_unbal$Processed_data)
+  )
+  meta_data_df = meta_data_df[intersecting_samples , ]
+  
+  print(" b. Convert balanced doppelganger to easy to view df")
+  # 2. Convert balanced doppelgangers to an easy to view data frame
+  doppelganger_df_bal = generate_planning_dataframes(
+    meta_data_df = meta_data_df,
+    doppel_results = doppel_results_bal
+  )$doppel_mapping
+  
+  print(" c. Convert unbalanced doppelganger to easy to view df")
+  # 3. Convert Unbalanced doppelgangers to an easy to view data frame
+  doppelganger_df_unbal = generate_planning_dataframes(
+    meta_data_df = meta_data_df,
+    doppel_results = doppel_results_unbal
+  )$doppel_mapping
+  
+  print(" d. Get doppelgangers in balanced but not in unbalanced")
+  # 4. Get doppelganger in balanced but not in unbalanced
+  # - Get setdiff between two doppelganger results
+  in_bal_not_in_unbal = setdiff_between_doppelganger_results(
+    doppel_result_1 = doppel_results_bal,
+    doppel_result_2 = doppel_results_unbal
+  )
+  doppelganger_df_in_bal_not_in_unbal = generate_planning_dataframes(
+    meta_data_df = meta_data_df,
+    doppel_results = in_bal_not_in_unbal
+  )$doppel_mapping
+  
+  print(" e. Get doppelgangers in unbalanced but not in balanced")
+  # 5. Get doppelganger in unbalanced but not in balanced
+  in_unbal_not_in_bal = setdiff_between_doppelganger_results(
+    doppel_result_1 = doppel_results_unbal,
+    doppel_result_2 = doppel_results_bal
+  )
+  doppelganger_df_in_unbal_not_in_bal = generate_planning_dataframes(
+    meta_data_df = meta_data_df,
+    doppel_results = in_unbal_not_in_bal
+  )$doppel_mapping
+  
+  print(" f. Get doppel and non_doppel samples for each data set")
+  # 6. Get doppel and non_doppel df for each data set
+  doppel_non_doppel_dfs = list()
+  for (batch in batches){
+    print(paste("  - Data set:", batch))
+    doppel_non_doppel_df = getDoppelnNonDoppelSamples(
+      doppel_result = doppel_results_bal,
+      metadata = meta_data_df,
+      batchname = batch
+    )
+    doppel_non_doppel_dfs[[batch]] = doppel_non_doppel_df
+  }
+  
+  print(" g. Get additional doppel samples in bal and unbal case")
+  additional_doppel_samples_df = get_additional_doppel_samples(
+    doppel_bal = doppel_results_bal,
+    doppel_unbal = doppel_results_unbal
+  )
+  
+  print("2. Creating workbook")
+  wb = createWorkbook()
+  addWorksheet(wb, "MetaData")
+  addWorksheet(wb, "Balanced Doppel")
+  addWorksheet(wb, "Unbalanced Doppel")
+  addWorksheet(wb, "Bal-Unbal Doppel")
+  addWorksheet(wb, "Unbal-Bal Doppel")
+  for (batch in batches){
+    addWorksheet(wb, paste("bal_doppel_samples", batch, sep="_"))
+  }
+  addWorksheet(wb, "Additional doppel samples")
+  
+  # 7. Write each data frame
+  writeData(wb, 1, meta_data_df)
+  writeData(wb, 2, doppelganger_df_bal, rowNames=TRUE)
+  writeData(wb, 3, doppelganger_df_unbal, rowNames=TRUE)
+  writeData(wb, 4, doppelganger_df_in_bal_not_in_unbal, rowNames=TRUE)
+  writeData(wb, 5, doppelganger_df_in_unbal_not_in_bal, rowNames=TRUE)
+  
+  index = 6
+  for (batch in batches){
+    writeData(wb, index, doppel_non_doppel_dfs[[batch]])
+    index = index + 1
+  }
+  
+  writeData(wb, index, additional_doppel_samples_df)
+  index = index + 1
+  
+  print("3. Saving workbook")
+  saveWorkbook(
+    wb, 
+    file = file.path(planning_data_dir, filename), 
+    overwrite = TRUE
+  )
+  
+}
+
