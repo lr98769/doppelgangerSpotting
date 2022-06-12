@@ -1,6 +1,6 @@
-Doppel_0.train,Doppel_0.valid,ALL_22_G.train,ALL_22_G.valid,ALL_19_G.train,ALL_19_G.valid,Pos_Con_1.train,Pos_Con_1.valid
-ALL_1_A,ALL_1_G,ALL_1_A,ALL_22_G,ALL_1_A,ALL_19_G,ALL_1_A,ALL_1_A
-ALL_2_A,ALL_2_G,ALL_2_A,ALL_2_G,ALL_2_A,ALL_2_G,ALL_2_A,ALL_2_G
+Doppel_0.train,Doppel_0.valid,ALL_19_G.train,ALL_19_G.valid,ALL_22_G.train,ALL_22_G.valid,Pos_Con_2.train,Pos_Con_2.valid
+ALL_1_A,ALL_1_G,ALL_1_A,ALL_19_G,ALL_1_A,ALL_19_G,ALL_1_A,ALL_1_A
+ALL_2_A,ALL_2_G,ALL_2_A,ALL_2_G,ALL_2_A,ALL_22_G,ALL_2_A,ALL_2_A
 ALL_3_A,ALL_3_G,ALL_3_A,ALL_3_G,ALL_3_A,ALL_3_G,ALL_3_A,ALL_3_G
 ALL_4_A,ALL_4_G,ALL_4_A,ALL_4_G,ALL_4_A,ALL_4_G,ALL_4_A,ALL_4_G
 ALL_5_A,ALL_5_G,ALL_5_A,ALL_5_G,ALL_5_A,ALL_5_G,ALL_5_A,ALL_5_G

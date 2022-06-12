@@ -41,6 +41,7 @@ source(file.path(functions_dir,"analysis_functions.R"))
 source(file.path(functions_dir,"planning_functions.R"))
 source(file.path(functions_dir,"process_vectors.R"))
 source(file.path(functions_dir,"process_lists.R"))
+source(file.path(functions_dir,"visualisation_code.R"))
 ```
 
 ## 1) Importing the Datsets
@@ -213,6 +214,12 @@ summary(doppel_ry$PPCC_df$PPCC)
 summary(doppel_ry_over$PPCC_df$PPCC)
 ```
 
+```{r}
+print(paste("Unbalanced cut-off:", doppel_ry$cut_off))
+print(paste("Balanced cut-off:", doppel_ry_over$cut_off))
+```
+
+
 When batches were balanced before doppelganger identification, PPCC decreased slightly. 
 
 ### c) Batch imbalance on batch correction efficacy
@@ -278,7 +285,9 @@ veri_results_all = verifyDoppelgangers(
   all_meta,
   do_batch_corr = FALSE,
   size_of_val_set = 10,
-  k=7
+  k=5,
+  feature_set_portion = 0.01,
+  num_random_feature_sets = 20
 )
 ```
 
@@ -288,6 +297,16 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4", "Doppel_5","Pos
 newTrainValidNames =  c("0 Doppel", "2 Doppel","4 Doppel", "5 Doppel","Pos Con 5", "Neg Con")
 
 visualiseVerificationResults(veri_results_all,
+                originalTrainValidNames,
+                newTrainValidNames)
+```
+
+```{r fig.width=10, fig.height=5}
+originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4", "Doppel_5","Pos_Con_5", "Neg_Con")
+
+newTrainValidNames =  c("0 Doppel", "2 Doppel","4 Doppel", "5 Doppel","Pos Con 5", "Neg Con")
+
+visualiseVerificationResults2(veri_results_all,
                 originalTrainValidNames,
                 newTrainValidNames)
 ```
@@ -309,16 +328,28 @@ veri_results_all_add = verifyDoppelgangers(
   all_meta,
   do_batch_corr = FALSE,
   size_of_val_set = 10,
-  k=7
+  k=5,
+  feature_set_portion = 0.01,
+  num_random_feature_sets = 20
 )
 ```
 
 ```{r fig.width=10, fig.height=5}
-originalTrainValidNames_add =  c("Doppel_0", "E2A_2_R", "E2A_13_R", "Pos_Con_1", "Neg_Con")
+originalTrainValidNames_add =  c("Doppel_0", "E2A_2_R", "E2A_13_R", "Pos_Con_2", "Neg_Con")
 
-newTrainValidNames_add =  c("0 Doppel", "E2A_2_R\n(Unbal)","E2A_13_R\n(Unbal)", "Pos Con 1", "Neg Con")
+newTrainValidNames_add =  c("0 Doppel", "E2A_2_R\n(Unbal)","E2A_13_R\n(Unbal)", "Pos Con 2", "Neg Con")
 
 visualiseVerificationResults(veri_results_all_add,
+                originalTrainValidNames_add,
+                newTrainValidNames_add)
+```
+
+```{r fig.width=10, fig.height=5}
+originalTrainValidNames_add =  c("Doppel_0", "E2A_2_R", "E2A_13_R", "Pos_Con_2", "Neg_Con")
+
+newTrainValidNames_add =  c("0 Doppel", "E2A_2_R\n(Unbal)","E2A_13_R\n(Unbal)", "Pos Con 2", "Neg Con")
+
+visualiseVerificationResults2(veri_results_all_add,
                 originalTrainValidNames_add,
                 newTrainValidNames_add)
 ```

@@ -123,7 +123,7 @@ ggsave(filename = file.path(images_dir, "microarray_ddi.tiff"), width = 10, heig
 
 ## DD Verification
 
-```{r fig.width=8, fig.height=10}
+```{r fig.width=8, fig.height=12}
 if (!"ggpubr" %in% installed.packages()){
   install.packages("ggpubr")
 }
@@ -136,7 +136,7 @@ dv_plot_info = list(
     "ori_names"=c("Doppel_0", "Doppel_2","Doppel_4",
                   "Doppel_6", "Doppel_8", "Doppel_10", 
                   "Pos_Con_10", "Neg_Con"),
-    "new_names"=c("0 Doppel", "2 Doppel", "2 Doppel", 
+    "new_names"=c("0 Doppel", "2 Doppel", "4 Doppel", 
                   "6 Doppel","8 Doppel", "10 Doppel", 
                   "10 Pos Con", "Neg Con"),
     "training_samples"=23,
@@ -156,7 +156,7 @@ dv_plot_info = list(
     "ori_names"=c("Doppel_0", "Doppel_2", "Doppel_4", 
                   "Doppel_5","Pos_Con_5", "Neg_Con"),
     "new_names"=c("0 Doppel", "2 Doppel","4 Doppel", 
-                  "5 Doppel","Pos Con 5", "Neg Con"),
+                  "5 Doppel","5 Pos Con", "Neg Con"),
     "training_samples"=30,
     "validation_samples"=10
   )
@@ -169,14 +169,14 @@ dataset_dv_subplots = lapply(
     veri_results = dv_plot_info[[dataset_name]]$veri_result
     ori_name = dv_plot_info[[dataset_name]]$ori_names
     new_name = dv_plot_info[[dataset_name]]$new_names
-    current_plot = visualiseVerificationResults(
+    current_plot = visualiseVerificationResults2(
         veri_results, ori_name, new_name
     ) + 
-      coord_cartesian(ylim = c(0, 1.1)) +
-      scale_y_continuous(breaks=seq(0,1,0.2)) +
+      coord_cartesian(ylim = c(0.3, 1.1)) +
+      scale_y_continuous(breaks=seq(0.3,1,0.1)) +
       labs(subtitle=glue("{dv_plot_info[[dataset_name]]$training_samples} Training, {dv_plot_info[[dataset_name]]$validation_samples} Validation")) + 
       theme(plot.subtitle=element_text(size=11, hjust=0.5, color="#2e2e2e")) + 
-      theme(plot.title=element_text(size=12, hjust=0.5, color="black", face="bold"))
+      theme(plot.title=element_text(size=12, hjust=0.5, color="black", face="bold")) 
     current_plot = ggpar(current_plot, title=dataset_name) 
     return(current_plot)
   }
@@ -206,16 +206,15 @@ microarray_dv_plots
 
 ```
 
-
 ```{r}
 # Output
-ggsave(filename = file.path(images_dir, "microarray_dv.tiff"), width = 8, height = 10, device='tiff')
+ggsave(filename = file.path(images_dir, "microarray_dv.tiff"), width = 8, height = 12, device='tiff')
 ```
 
 
 ### Additional
 
-```{r fig.width=8, fig.height=10}
+```{r fig.width=8, fig.height=12}
 if (!"ggpubr" %in% installed.packages()){
   install.packages("ggpubr")
 }
@@ -226,27 +225,30 @@ dv_add_plot_info = list(
   "DMD"=list(
     "veri_result"=veri_results_dmd_add,
     "ori_names"=c("Doppel_0", "DMD_13_P","NOR_2_P",
-                  "NOR_7_P", "Pos_Con_1", "Neg_Con"),
-    "new_names"=c("0 Doppel", "DMD_13_P\n(Unbal)","NOR_2_P\n(Unbal)",
-                  "NOR_7_P\n(Unbal)", "1 Pos Con", "Neg Con"),
+                  "NOR_7_P", "Pos_Con_3", "Neg_Con"),
+    "new_names"=c("0 Doppel", "DMD_13_P\n(Unbalanced)",
+                  "NOR_2_P\n(Unbalanced)","NOR_7_P\n(Unbalanced)", 
+                  "3 Pos Con", "Neg Con"),
     "training_samples"=23,
     "validation_samples"=10
   ),
   "Leukaemia"=list(
     "veri_result"=veri_results_leuk_add,
     "ori_names"=c("Doppel_0", "ALL_22_G", "ALL_19_G", 
-                  "Pos_Con_1", "Neg_Con"),
-    "new_names"=c("0 Doppel", "ALL_22_G\n(Bal)", "ALL_19_G\n(Bal)",
-                  "1 Pos Con", "Neg Con"),
+                  "Pos_Con_2", "Neg_Con"),
+    "new_names"=c("0 Doppel", "ALL_22_G\n(Balanced)",
+                  "ALL_19_G\n(Balanced)",
+                  "2 Pos Con", "Neg Con"),
     "training_samples"=48,
     "validation_samples"=10
   ),
   "ALL"=list(
     "veri_result"=veri_results_all_add,
     "ori_names"=c("Doppel_0", "E2A_2_R", "E2A_13_R", 
-                  "Pos_Con_1", "Neg_Con"),
-    "new_names"=c("0 Doppel", "E2A_2_R\n(Unbal)","E2A_13_R\n(Unbal)", 
-                  "Pos Con 1", "Neg Con"),
+                  "Pos_Con_2", "Neg_Con"),
+    "new_names"=c("0 Doppel", "E2A_2_R\n(Unbalanced)", 
+                  "E2A_13_R\n(Unbalanced)", 
+                  "2 Pos Con", "Neg Con"),
     "training_samples"=30,
     "validation_samples"=10
   )
@@ -259,11 +261,11 @@ dataset_dv_add_subplots = lapply(
     veri_results = dv_add_plot_info[[dataset_name]]$veri_result
     ori_name = dv_add_plot_info[[dataset_name]]$ori_names
     new_name = dv_add_plot_info[[dataset_name]]$new_names
-    current_plot = visualiseVerificationResults(
+    current_plot = visualiseVerificationResults2(
         veri_results, ori_name, new_name
     ) + 
-      coord_cartesian(ylim = c(0, 1.1)) +
-      scale_y_continuous(breaks=seq(0,1,0.2)) +
+      coord_cartesian(ylim = c(0.2, 1.05)) +
+      scale_y_continuous(breaks=seq(0.3,1,0.1)) +
       labs(subtitle=glue("{dv_add_plot_info[[dataset_name]]$training_samples} Training, {dv_add_plot_info[[dataset_name]]$validation_samples} Validation")) + 
       theme(plot.subtitle=element_text(size=11, hjust=0.5, color="#2e2e2e")) + 
       theme(plot.title=element_text(size=12, hjust=0.5, color="black", face="bold"))
@@ -295,3 +297,8 @@ microarray_dv_add_plots = annotate_figure(
 microarray_dv_add_plots
 
 ```
+```{r}
+# Output
+ggsave(filename = file.path(images_dir, "microarray_dv_add.tiff"), width = 8, height = 12, device='tiff')
+```
+

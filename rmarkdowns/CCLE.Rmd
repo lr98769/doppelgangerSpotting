@@ -31,6 +31,7 @@ source(file.path(functions_dir, "process_lists.R"))
 source(file.path(functions_dir,"analysis_functions.R"))
 source(file.path(functions_dir, "output_functions.R"))
 source(file.path(functions_dir, "planning_functions.R"))
+source(file.path(functions_dir,"visualisation_code.R"))
 ```
 
 ## c) File Paths
@@ -79,6 +80,7 @@ dv_image_filepath= file.path(images_dir, "ccle_dv.tiff")
 ```
 
 # d) Ensure directories and the proper files have been downloaded
+
 ```{r}
 directories = c(
   dataset_dir, processed_dataset_dir, planning_data_dir, 
@@ -94,10 +96,11 @@ if (!file.exists(dataset_filepath)){
 }
 
 ```
+
 # 1. Importing the Dataset
 
-Data Set Statistics:
-- 57820 Genes
+Data Set Statistics: 
+- 57820 Genes 
 - 1019 Samples
 
 ```{r}
@@ -131,7 +134,7 @@ View(table(ccle_meta$Class))
 
 # 2. Finding PPCC Doppelgangers Within CCLE
 
-We chose 2 sets of cancer pairs to look for doppelgangers. 
+We chose 2 sets of cancer pairs to look for doppelgangers.
 
 ## a) "Haematopoietic and Lymphoid Tissue" and "Lung" Cancer
 
@@ -155,6 +158,7 @@ if (!file.exists(processed_lymph_lung_filepath)){
 }
 table(lymph_lung_meta$Class)
 ```
+
 Let's observe if there are any doppelgangers within this data.
 
 ```{r}
@@ -192,7 +196,7 @@ lymph_lung_doppelganger_df
 
 ## b) "Large Intestine" and "Upper Aerodigestive Tract" Cancer
 
- There are 56 LARGE_INTESTINE samples and 31 UPPER_AERODIGESTIVE_TRACT  samples.
+There are 56 LARGE_INTESTINE samples and 31 UPPER_AERODIGESTIVE_TRACT samples.
 
 ```{r}
 if (!file.exists(processed_large_upper_meta_filepath)){
@@ -224,6 +228,7 @@ large_upper_doppel = getPPCCDoppelgangers(
 end_time = Sys.time()
 end_time - start_time
 ```
+
 ```{r fig.width=10, fig.height=5}
 visualisePPCCDoppelgangers(large_upper_doppel) + ggtitle(label="PPCC Doppelganger Identification", subtitle="LARGE_INTESTINE + UPPER_AERODIGESTIVE_TRACT") + theme(plot.subtitle = element_text(hjust = 0.5))
 ```
@@ -285,6 +290,7 @@ lymph_lung_experiment_plan = generate_experiment_plan(
   valid_doppel = valid_doppel,
   num_samples_added = 10)
 ```
+
 Output the experiment plan to an excel file (For a visual check)
 
 ```{r}
@@ -303,6 +309,7 @@ output_experiment_plan(
   ex_plan_xlsx_fp = ex_plan_lymph_lung_xlsx_filepath,
   highlight_style_list = highlight_style_list)
 ```
+
 Verifying the functionality of PPCC data doppelgangers
 
 ```{r}
@@ -310,18 +317,30 @@ lymph_lung_veri = verifyDoppelgangers(
   experiment_plan_filename = ex_plan_lymph_lung_csv_filepath,
   raw_data = lymph_lung,
   meta_data = lymph_lung_meta,
-  feature_set_portion = 0.01,
   do_batch_corr = FALSE,
   k=17,
-  size_of_val_set = 50
+  size_of_val_set = 50,
+  feature_set_portion = 0.01,
+  num_random_feature_sets = 20
 )
 ```
 
 Visualise the results
 
 ```{r fig.width=10, fig.height=5}
-visualiseVerificationResults(lymph_lung_veri) + ggtitle(label="Accuracy of KNN Models", subtitle="HAEMATOPOIETIC_AND_LYMPHOID_TISSUE + LUNG\nValidation Set Size = 50 Samples") + theme(plot.subtitle = element_text(hjust = 0.5))
+visualiseVerificationResults(lymph_lung_veri) + 
+  ggtitle(label="Accuracy of KNN Models",
+          subtitle="HAEMATOPOIETIC_AND_LYMPHOID_TISSUE + LUNG\nValidation Set Size = 50 Samples") + 
+  theme(plot.subtitle = element_text(hjust = 0.5))
 ```
+
+```{r fig.width=10, fig.height=5}
+visualiseVerificationResults2(lymph_lung_veri) + 
+  ggtitle(label="Accuracy of KNN Models",
+          subtitle="HAEMATOPOIETIC_AND_LYMPHOID_TISSUE + LUNG\nValidation Set Size = 50 Samples") + 
+  theme(plot.subtitle = element_text(hjust = 0.5))
+```
+
 ```{r}
 check_veri_stats(
   meta_data_df = lymph_lung_meta,
@@ -329,7 +348,6 @@ check_veri_stats(
   doppel_results = lymph_lung_doppel
 )
 ```
-
 
 ## b) "Large Intestine" and "Upper Aerodigestive Tract" Cancer
 
@@ -371,6 +389,7 @@ output_experiment_plan(
   highlight_style_list = highlight_style_list
 )
 ```
+
 Verify functionality of PPCC data doppelgangers
 
 ```{r}
@@ -378,17 +397,26 @@ large_upper_veri = verifyDoppelgangers(
   experiment_plan_filename = ex_plan_large_upper_csv_filepath,
   raw_data = large_upper,
   meta_data = large_upper_meta,
-  feature_set_portion = 0.01,
   do_batch_corr = FALSE,
   k=9,
-  size_of_val_set = 10
+  size_of_val_set = 10,
+  feature_set_portion = 0.01,
+  num_random_feature_sets = 20
 )
 ```
 
 View verification results
 
 ```{r fig.width=10, fig.height=5}
-visualiseVerificationResults(large_upper_veri) + ggtitle(label="Accuracy of KNN Models", subtitle="LARGE_INTESTINE + UPPER_AERODIGESTIVE_TRACT\nValidation Set Size = 10 Samples") + theme(plot.subtitle = element_text(hjust = 0.5))
+visualiseVerificationResults(large_upper_veri) +
+  ggtitle(label="Accuracy of KNN Models", subtitle="LARGE_INTESTINE + UPPER_AERODIGESTIVE_TRACT\nValidation Set Size = 10 Samples") +
+  theme(plot.subtitle = element_text(hjust = 0.5))
+```
+
+```{r fig.width=10, fig.height=5}
+visualiseVerificationResults2(large_upper_veri) +
+  ggtitle(label="Accuracy of KNN Models", subtitle="LARGE_INTESTINE + UPPER_AERODIGESTIVE_TRACT\nValidation Set Size = 10 Samples") +
+  theme(plot.subtitle = element_text(hjust = 0.5))
 ```
 
 ```{r}
@@ -450,7 +478,7 @@ library(ggpubr)
 
 # Arrange both plots
 ccle_dv_plots = ggarrange(
-  ggpar(visualiseVerificationResults(lymph_lung_veri,
+  ggpar(visualiseVerificationResults2(lymph_lung_veri,
     c("Doppel_0","Doppel_10", "Doppel_20", "Doppel_30", "Doppel_40","Doppel_50", "Pos_Con_50", "Neg_Con"),
     c("0 Doppel", "10 Doppel", "20 Doppel", "30 Doppel", "40 Doppel", "50 Doppel", "50 Pos Con", "Neg Con")) +
     coord_cartesian(ylim = c(0.35, 1.05)),
@@ -459,7 +487,7 @@ ccle_dv_plots = ggarrange(
     labs(subtitle="311 Training, 50 Validation") + 
       theme(plot.subtitle=element_text(size=11, hjust=0.5, color="#2e2e2e")) + 
       theme(plot.title=element_text(size=12, hjust=0.5, color="black", face="bold")),
-  ggpar(visualiseVerificationResults(large_upper_veri,
+  ggpar(visualiseVerificationResults2(large_upper_veri,
     c("Doppel_0","Doppel_1", "Doppel_2", "Doppel_3", "Doppel_4", "Doppel_5", "Pos_Con_5", "Neg_Con"),
     c("0 Doppel", "1 Doppel", "2 Doppel", "3 Doppel", "4 Doppel", "5 Doppel", "5 Pos Con", "Neg Con")
     ) +
@@ -491,3 +519,26 @@ ccle_dv_plots
 ggsave(filename = dv_image_filepath, width = 8, height = 10, device='tiff')
 ```
 
+```{r}
+get_class_patient_stats <- function(doppel_result, 
+                      ClassPatient="Different Class\n Different Patient"){
+  ppcc_df = doppel_result$PPCC_df
+  df_class_patient = ppcc_df[ppcc_df$ClassPatient==ClassPatient,]
+  class_patient_ppcc = df_class_patient$PPCC
+  
+  upper_outlier = max(class_patient_ppcc)
+  mean_ppcc = mean(class_patient_ppcc)
+  sd_ppcc = sd(class_patient_ppcc)
+  outlier_z_score = (upper_outlier-mean_ppcc)/sd_ppcc
+  
+  print(paste("Upper Outlier:", upper_outlier))
+  print(paste("Mean:", mean_ppcc))
+  print(paste("SD:", sd_ppcc))
+  print(paste("Z Score:", outlier_z_score))
+}
+print("Lymph_lung: ")
+get_class_patient_stats(lymph_lung_doppel)
+print("")
+print("large_upper: ")
+get_class_patient_stats(large_upper_doppel)
+```

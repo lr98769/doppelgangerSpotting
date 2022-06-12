@@ -41,6 +41,7 @@ source(file.path(functions_dir,"analysis_functions.R"))
 source(file.path(functions_dir,"planning_functions.R"))
 source(file.path(functions_dir,"process_vectors.R"))
 source(file.path(functions_dir,"process_lists.R"))
+source(file.path(functions_dir,"visualisation_code.R"))
 ```
 
 
@@ -210,6 +211,11 @@ summary(doppel_ag_over$PPCC_df$PPCC)
 
 Only slight differences (decrease) in PPCC distribution after oversampling.
 
+```{r}
+print(paste("Unbalanced cut-off:", doppel_ag$cut_off))
+print(paste("Balanced cut-off:", doppel_ag_over$cut_off))
+```
+
 ### c) Batch imbalance on batch correction efficacy
 
 ```{r}
@@ -272,7 +278,9 @@ veri_results_leuk = verifyDoppelgangers(
       leuk_meta,
       do_batch_corr = FALSE,
       k=7,
-      size_of_val_set = 10
+      size_of_val_set = 10,
+      feature_set_portion = 0.01,
+      num_random_feature_sets = 20
   )
 ```
 ```{r fig.width=10, fig.height=5}
@@ -280,7 +288,7 @@ originalTrainValidNames =  c("Doppel_0", "Doppel_2", "Doppel_4", "Doppel_6","Pos
 
 newTrainValidNames =  c("0 Doppel", "2 Doppel", "4 Doppel","6 Doppel","6 Pos Con", "Neg Con")
 
-visualiseVerificationResults(veri_results_leuk,
+visualiseVerificationResults2(veri_results_leuk,
                 originalTrainValidNames,
                 newTrainValidNames)
 ```
@@ -302,16 +310,28 @@ veri_results_leuk_add = verifyDoppelgangers(
     leuk_meta,
     do_batch_corr = FALSE,
     k=7,
-    size_of_val_set = 10
+    size_of_val_set = 10,
+    feature_set_portion = 0.01,
+    num_random_feature_sets = 20,
 )
 ```
 
 ```{r fig.width=10, fig.height=5}
-originalTrainValidNames_add =  c("Doppel_0", "ALL_22_G", "ALL_19_G", "Pos_Con_1", "Neg_Con")
+originalTrainValidNames_add =  c("Doppel_0", "ALL_22_G", "ALL_19_G", "Pos_Con_2", "Neg_Con")
 
-newTrainValidNames_add =  c("0 Doppel", "ALL_22_G\n(Bal)", "ALL_19_G\n(Bal)","1 Pos Con", "Neg Con")
+newTrainValidNames_add =  c("0 Doppel", "ALL_22_G\n(Bal)", "ALL_19_G\n(Bal)","2 Pos Con", "Neg Con")
 
 visualiseVerificationResults(veri_results_leuk_add,
+                originalTrainValidNames_add,
+                newTrainValidNames_add)
+```
+
+```{r fig.width=10, fig.height=5}
+originalTrainValidNames_add =  c("Doppel_0", "ALL_22_G", "ALL_19_G", "Pos_Con_2", "Neg_Con")
+
+newTrainValidNames_add =  c("0 Doppel", "ALL_22_G\n(Bal)", "ALL_19_G\n(Bal)","2 Pos Con", "Neg Con")
+
+visualiseVerificationResults2(veri_results_leuk_add,
                 originalTrainValidNames_add,
                 newTrainValidNames_add)
 ```
