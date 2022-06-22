@@ -183,7 +183,7 @@ end_time = Sys.time()
 end_time - start_time
 ```
 
-    ## Time difference of 2.867677 mins
+    ## Time difference of 3.233721 mins
 
 ``` r
 visualisePPCCDoppelgangers(lymph_lung_doppel) + ggtitle(label="PPCC Doppelganger Identification", subtitle="HAEMATOPOIETIC_AND_LYMPHOID_TISSUE + LUNG") + theme(plot.subtitle = element_text(hjust = 0.5))
@@ -2345,7 +2345,7 @@ end_time = Sys.time()
 end_time - start_time
 ```
 
-    ## Time difference of 12.26889 secs
+    ## Time difference of 13.24645 secs
 
 ``` r
 visualisePPCCDoppelgangers(large_upper_doppel) + ggtitle(label="PPCC Doppelganger Identification", subtitle="LARGE_INTESTINE + UPPER_AERODIGESTIVE_TRACT") + theme(plot.subtitle = element_text(hjust = 0.5))
@@ -2960,7 +2960,7 @@ ccle_dv_plots = ggarrange(
 # Add big title above
 ccle_dv_plots = annotate_figure(
   ccle_dv_plots,
-  top = text_grob("Functional Doppelganger Verification",
+  top = text_grob("Functional Doppelgänger Testing",
   color = "black",
   face = "bold",
   size = 18))

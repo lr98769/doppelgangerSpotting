@@ -196,7 +196,7 @@ microarray_dv_plots = ggarrange(
 # Add big title above
 microarray_dv_plots = annotate_figure(
   microarray_dv_plots,
-  top = text_grob("Functional Doppelganger Verification",
+  top = text_grob("Functional Doppelgänger Testing",
   color = "black",
   face = "bold",
   size = 18)
@@ -288,7 +288,7 @@ microarray_dv_add_plots = ggarrange(
 # Add big title above
 microarray_dv_add_plots = annotate_figure(
   microarray_dv_add_plots,
-  top = text_grob("Functional Doppelganger Verification (Additional)",
+  top = text_grob("Functional Doppelgänger Testing (Additional)",
   color = "black",
   face = "bold",
   size = 18)

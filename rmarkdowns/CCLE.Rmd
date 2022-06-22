@@ -506,7 +506,7 @@ ccle_dv_plots = ggarrange(
 # Add big title above
 ccle_dv_plots = annotate_figure(
   ccle_dv_plots,
-  top = text_grob("Functional Doppelganger Verification",
+  top = text_grob("Functional Doppelgänger Testing",
   color = "black",
   face = "bold",
   size = 18))
